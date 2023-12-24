@@ -4,6 +4,7 @@
 #include "link_rfu.h"
 #include "load_save.h"
 #include "m4a.h"
+#include "rtc.h"
 #include "random.h"
 #include "gba/flash_internal.h"
 #include "help_system.h"
@@ -130,6 +131,7 @@ void AgbMain()
     m4aSoundInit();
     EnableVCountIntrAtLine150();
     InitRFU();
+    RtcInit();
     CheckForFlashMemory();
     InitMainCallbacks();
     InitMapMusic();
@@ -308,7 +310,10 @@ static void ReadKeys(void)
             gMain.newKeys |= A_BUTTON;
 
         if (JOY_HELD(L_BUTTON))
+        {
             gMain.heldKeys |= A_BUTTON;
+            gMain.newKeys ^= A_BUTTON;
+        }
     }
 
     if (JOY_NEW(gMain.watchedKeysMask))
@@ -441,8 +446,9 @@ static void WaitForVBlank(void)
 {
     gMain.intrCheck &= ~INTR_FLAG_VBLANK;
 
-    while (!(gMain.intrCheck & INTR_FLAG_VBLANK))
-        ;
+    //while (!(gMain.intrCheck & INTR_FLAG_VBLANK))
+    //    ;
+    asm("swi 0x5");
 }
 
 void SetVBlankCounter1Ptr(u32 *ptr)
@@ -463,6 +469,7 @@ void DoSoftReset(void)
     DmaStop(1);
     DmaStop(2);
     DmaStop(3);
+    SiiRtcProtect();
     SoftReset(RESET_ALL & ~RESET_SIO_REGS);
 }
 

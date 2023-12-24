@@ -85,6 +85,7 @@ gStdScripts::
 	.4byte Std_ObtainDecoration     @ STD_OBTAIN_DECORATION
 	.4byte Std_PutItemAway          @ STD_PUT_ITEM_AWAY
 	.4byte Std_ReceivedItem         @ STD_RECEIVED_ITEM
+	.4byte Std_MsgboxAnyButtonPress    @ MSGBOX_ANYBUTTONPRESS
 gStdScriptsEnd::
 
 	.include "data/maps/BattleColosseum_2P/scripts.inc"
@@ -856,7 +857,7 @@ Text_WantWhichFloor::
 
 Text_BagItemCanBeRegistered::
 	.string "An item in the BAG can be\n"
-	.string "registered to SELECT for easy use.$"
+	.string "registered for easy use.$"
 
 @ Unused (email from R/S Rivals computer)
 Text_TrainerSchoolEmail::
@@ -1009,6 +1010,14 @@ Text_Gyaoo::
 Text_MoveCanOnlyBeLearnedOnce::
 	.string "This move can be learned only\n"
 	.string "once. Is that okay?$"
+
+gText_ShinyRoamer::
+    .string "...You hear the faint sparkle of a\n"
+    .string "shiny POKéMON roaming the region...!$"
+
+gText_Roamer::
+    .string "...It sounds like a POKéMON\n"
+    .string "started roaming the region...!$"
 
 EventScript_ResetAllMapFlags::
 	setflag FLAG_HIDE_OAK_IN_HIS_LAB
@@ -1360,3 +1369,7 @@ Text_TestMsg::
 	.include "data/text/save.inc"
 	.include "data/text/new_game_intro.inc"
 	.include "data/text/pokedude.inc"
+	.include "data/text/lottery_corner.inc"
+	.include "data/scripts/chain.inc"
+	.include "data/scripts/change_deoxys_form.inc"
+

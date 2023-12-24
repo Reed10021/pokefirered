@@ -21,6 +21,7 @@
 #include "field_fadetransition.h"
 #include "field_player_avatar.h"
 #include "new_menu_helpers.h"
+#include "pokemon_storage_system_internal.h"
 #include "event_object_movement.h"
 #include "event_object_lock.h"
 #include "script.h"
@@ -48,6 +49,7 @@ enum StartMenuOption
     STARTMENU_EXIT,
     STARTMENU_RETIRE,
     STARTMENU_PLAYER2,
+    STARTMENU_PC,
     MAX_STARTMENU_ITEMS
 };
 
@@ -58,6 +60,8 @@ enum SaveCBReturn
     SAVECB_RETURN_CANCEL,
     SAVECB_RETURN_ERROR
 };
+
+EWRAM_DATA bool8 gSysPcFromStartMenu = 0;
 
 static EWRAM_DATA bool8 (*sStartMenuCallback)(void) = NULL;
 static EWRAM_DATA u8 sStartMenuCursorPos = 0;
@@ -81,6 +85,7 @@ static bool8 StartMenuPokedexSanityCheck(void);
 static bool8 StartMenuPokedexCallback(void);
 static bool8 StartMenuPokemonCallback(void);
 static bool8 StartMenuBagCallback(void);
+static bool8 StartMenuPCCallback(void);
 static bool8 StartMenuPlayerCallback(void);
 static bool8 StartMenuSaveCallback(void);
 static bool8 StartMenuOptionCallback(void);
@@ -121,7 +126,8 @@ static const struct MenuAction sStartMenuActionTable[] = {
     { gText_MenuOption, {.u8_void = StartMenuOptionCallback} },
     { gText_MenuExit, {.u8_void = StartMenuExitCallback} },
     { gText_MenuRetire, {.u8_void = StartMenuSafariZoneRetireCallback} },
-    { gText_MenuPlayer, {.u8_void = StartMenuLinkPlayerCallback} }
+    { gText_MenuPlayer, {.u8_void = StartMenuLinkPlayerCallback} },
+    { gText_MenuPC, {.u8_void = StartMenuPCCallback} }
 };
 
 static const struct WindowTemplate sSafariZoneStatsWindowTemplate = {
@@ -143,7 +149,8 @@ static const u8 *const sStartMenuDescPointers[] = {
     gStartMenuDesc_Option,
     gStartMenuDesc_Exit,
     gStartMenuDesc_Retire,
-    gStartMenuDesc_Player
+    gStartMenuDesc_Player,
+    gStartMenuDesc_PC
 };
 
 static const struct BgTemplate sBGTemplates_AfterLinkSaveMessage[] = {
@@ -175,7 +182,7 @@ static const struct WindowTemplate sSaveStatsWindowTemplate = {
     .tilemapLeft = 1,
     .tilemapTop = 1,
     .width = 14,
-    .height = 9,
+    .height = 11,
     .paletteNum = 13,
     .baseBlock = 0x008
 };
@@ -217,6 +224,8 @@ static void SetUpStartMenu_NormalField(void)
         AppendToStartMenuItems(STARTMENU_POKEMON);
     AppendToStartMenuItems(STARTMENU_BAG);
     AppendToStartMenuItems(STARTMENU_PLAYER);
+    if (FlagGet(FLAG_SYS_POKEMON_GET) == TRUE)
+        AppendToStartMenuItems(STARTMENU_PC);
     AppendToStartMenuItems(STARTMENU_SAVE);
     AppendToStartMenuItems(STARTMENU_OPTION);
     AppendToStartMenuItems(STARTMENU_EXIT);
@@ -257,7 +266,7 @@ static void DrawSafariZoneStatsWindow(void)
     PutWindowTilemap(sSafariZoneStatsWindowId);
     DrawStdWindowFrame(sSafariZoneStatsWindowId, FALSE);
     ConvertIntToDecimalStringN(gStringVar1, gSafariZoneStepCounter, STR_CONV_MODE_RIGHT_ALIGN, 3);
-    ConvertIntToDecimalStringN(gStringVar2, 600, STR_CONV_MODE_RIGHT_ALIGN, 3);
+    ConvertIntToDecimalStringN(gStringVar2, 900, STR_CONV_MODE_RIGHT_ALIGN, 3);
     ConvertIntToDecimalStringN(gStringVar3, gNumSafariBalls, STR_CONV_MODE_RIGHT_ALIGN, 2);
     StringExpandPlaceholders(gStringVar4, gText_MenuSafariStats);
     AddTextPrinterParameterized(sSafariZoneStatsWindowId, FONT_NORMAL, gStringVar4, 4, 3, 0xFF, NULL);
@@ -447,6 +456,7 @@ static void StartMenu_FadeScreenIfLeavingOverworld(void)
 {
     if (sStartMenuCallback != StartMenuSaveCallback
      && sStartMenuCallback != StartMenuExitCallback
+     && sStartMenuCallback != StartMenuPCCallback
      && sStartMenuCallback != StartMenuSafariZoneRetireCallback)
     {
         StopPokemonLeagueLightingEffectTask();
@@ -562,6 +572,14 @@ static bool8 StartMenuLinkPlayerCallback(void)
         return TRUE;
     }
     return FALSE;
+}
+
+static bool8 StartMenuPCCallback(void)
+{
+    gSysPcFromStartMenu = TRUE;
+    CloseStartMenu();
+    ScriptContext_SetupScript(EventScript_PC);
+    return TRUE;
 }
 
 static bool8 StartCB_Save1(void)
@@ -987,6 +1005,13 @@ static void PrintSaveStats(void)
     AddTextPrinterParameterized3(sSaveStatsWindowId, FONT_SMALL, 2, y, sTextColor_StatName, -1, gSaveStatName_Time);
     SaveStatToString(SAVE_STAT_TIME, gStringVar4, 2);
     AddTextPrinterParameterized3(sSaveStatsWindowId, FONT_SMALL, 60, y, sTextColor_StatValue, -1, gStringVar4);
+    if (FlagGet(FLAG_SET_WALL_CLOCK) == TRUE)
+    {
+        y = 70;
+        AddTextPrinterParameterized3(sSaveStatsWindowId, FONT_SMALL, 2, y, sTextColor_StatName, -1, gSaveStatName_ClockTime);
+        SaveStatToString(SAVE_STAT_CLOCKTIME, gStringVar4, 2);
+        AddTextPrinterParameterized3(sSaveStatsWindowId, FONT_SMALL, 60, y, sTextColor_StatValue, -1, gStringVar4);
+    }
     CopyWindowToVram(sSaveStatsWindowId, COPYWIN_GFX);
 }
 

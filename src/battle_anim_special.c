@@ -44,6 +44,7 @@ static void SpriteCB_ThrowBall_ArcFlight(struct Sprite *);
 static void TrainerBallBlock(struct Sprite *);
 static void SpriteCB_ThrowBall_TenFrameDelay(struct Sprite *);
 static void SpriteCB_ThrowBall_ShrinkMon(struct Sprite *);
+static void SpriteCB_Ball_CriticalCapture_Step(struct Sprite*);
 static void SpriteCB_ThrowBall_InitialFall(struct Sprite *);
 static void SpriteCB_ThrowBall_Bounce(struct Sprite *);
 static void SpriteCB_ThrowBall_DelayThenBreakOut(struct Sprite *);
@@ -52,11 +53,12 @@ static void SpriteCB_ThrowBall_DoShake(struct Sprite *);
 static void SpriteCB_ThrowBall_InitClick(struct Sprite *);
 static void SpriteCB_ThrowBall_BeginBreakOut(struct Sprite *);
 static void SpriteCB_ThrowBall_DoClick(struct Sprite *);
-static void CreateStarsWhenBallClicks(struct Sprite *);
+static void CreateStarsWhenBallClicks(struct Sprite *, u8);
 static void SpriteCB_ThrowBall_FinishClick(struct Sprite *);
 static void BattleAnimObj_SignalEnd(struct Sprite *);
 static void LoadBallParticleGfx(u8);
 static void SpriteCB_BallCaptureSuccessStar(struct Sprite *);
+static void SpriteCB_BallCaptureSuccessStar_NoFlicker(struct Sprite *);
 static void SpriteCB_ThrowBall_RunBreakOut(struct Sprite *);
 static void TrainerBallBlock2(struct Sprite *);
 static void GhostBallDodge(struct Sprite *sprite);
@@ -930,9 +932,22 @@ static void SpriteCB_ThrowBall_InitialFall(struct Sprite *sprite)
         angle = 0;
         sprite->y += Cos(angle, 40);
         sprite->y2 = -Cos(angle, sprite->data[4]);
-        sprite->callback = SpriteCB_ThrowBall_Bounce;
+        sprite->callback = SpriteCB_Ball_CriticalCapture_Step;
     }
 }
+
+static void SpriteCB_Ball_CriticalCapture_Step(struct Sprite* sprite)
+{
+    if (gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_1_SHAKE_SUCCESS ||
+        gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_1_SHAKE_FAIL ||
+        gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_0_SHAKES_SUCCESS)
+    {
+        CreateStarsWhenBallClicks(sprite, 1);
+        PlaySE(SE_SHINY);
+    }
+    sprite->callback = SpriteCB_ThrowBall_Bounce;
+}
+
 
 static void SpriteCB_ThrowBall_Bounce(struct Sprite *sprite)
 {
@@ -993,6 +1008,12 @@ static void SpriteCB_ThrowBall_Bounce(struct Sprite *sprite)
             sprite->data[5] = 0;
             sprite->callback = SpriteCB_ThrowBall_DelayThenBreakOut;
         }
+        else if (gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_0_SHAKES_SUCCESS)
+        {
+            sprite->data[5] = 0;
+            sprite->affineAnimPaused = TRUE;
+            sprite->callback = SpriteCB_ThrowBall_InitClick;
+        }
         else
         {
             sprite->callback = SpriteCB_ThrowBall_InitShake;
@@ -1004,7 +1025,7 @@ static void SpriteCB_ThrowBall_Bounce(struct Sprite *sprite)
 
 static void SpriteCB_ThrowBall_InitShake(struct Sprite *sprite)
 {
-    if (++sprite->data[3] == 31)
+    if (++sprite->data[3] == 16) //31
     {
         sprite->data[3] = 0;
         sprite->affineAnimPaused = TRUE;
@@ -1129,21 +1150,25 @@ static void SpriteCB_ThrowBall_DoShake(struct Sprite *sprite)
         }
         else
         {
-            if (gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_3_SHAKES_SUCCESS && state == 3)
+            if ((gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_3_SHAKES_SUCCESS && state == 3) ||
+                (gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_1_SHAKE_SUCCESS && state == 1))
             {
                 sprite->callback = SpriteCB_ThrowBall_InitClick;
-                sprite->affineAnimPaused = TRUE;
+            }
+            else if (gBattleSpritesDataPtr->animationData->ballThrowCaseId == BALL_1_SHAKE_FAIL && state == 1)
+            {
+                sprite->callback = SpriteCB_ThrowBall_DelayThenBreakOut;
             }
             else
             {
                 sprite->data[3]++;
-                sprite->affineAnimPaused = TRUE;
             }
+            sprite->affineAnimPaused = TRUE;
         }
         break;
     case 6:
     default:
-        if (++sprite->data[5] == 31)
+        if (++sprite->data[5] == 16) //31
         {
             sprite->data[5] = 0;
             sprite->data[3] &= -0x100;
@@ -1186,7 +1211,7 @@ static void SpriteCB_ThrowBall_DoClick(struct Sprite *sprite)
     {
         PlaySE(SE_BALL_CLICK);
         BlendPalettes(0x10000 << sprite->oam.paletteNum, 6, RGB_BLACK);
-        CreateStarsWhenBallClicks(sprite);
+        CreateStarsWhenBallClicks(sprite, 0);
     }
     else if (sprite->data[4] == 60)
     {
@@ -1263,7 +1288,7 @@ static void BattleAnimObj_SignalEnd(struct Sprite *sprite)
     }
 }
 
-static void CreateStarsWhenBallClicks(struct Sprite *sprite)
+static void CreateStarsWhenBallClicks(struct Sprite *sprite, u8 mode)
 {
     u32 i;
     u8 subpriority;
@@ -1281,16 +1306,31 @@ static void CreateStarsWhenBallClicks(struct Sprite *sprite)
     LoadBallParticleGfx(BALL_MASTER);
     for (i = 0; i < 3; i++)
     {
-        u8 spriteId = CreateSprite(&sBallParticlesSpriteTemplates[BALL_MASTER], sprite->x, sprite->y, subpriority);
-        if (spriteId != MAX_SPRITES)
-        {
-            gSprites[spriteId].sTransl_Speed = 24;
-            gSprites[spriteId].sTransl_DestX = sprite->x + sCaptureStar[i].xOffset;
-            gSprites[spriteId].sTransl_DestY = sprite->y + sCaptureStar[i].yOffset;
-            gSprites[spriteId].sTransl_ArcAmpl = sCaptureStar[i].amplitude;
-            InitAnimArcTranslation(&gSprites[spriteId]);
-            gSprites[spriteId].callback = SpriteCB_BallCaptureSuccessStar;
-            StartSpriteAnim(&gSprites[spriteId], sBallParticleAnimNums[BALL_MASTER]);
+        if (mode == 0) {
+            u8 spriteId = CreateSprite(&sBallParticlesSpriteTemplates[BALL_MASTER], sprite->x, sprite->y, subpriority);
+            if (spriteId != MAX_SPRITES)
+            {
+                gSprites[spriteId].sTransl_Speed = 24;
+                gSprites[spriteId].sTransl_DestX = sprite->x + sCaptureStar[i].xOffset;
+                gSprites[spriteId].sTransl_DestY = sprite->y + sCaptureStar[i].yOffset;
+                gSprites[spriteId].sTransl_ArcAmpl = sCaptureStar[i].amplitude;
+                InitAnimArcTranslation(&gSprites[spriteId]);
+                gSprites[spriteId].callback = SpriteCB_BallCaptureSuccessStar;
+                StartSpriteAnim(&gSprites[spriteId], sBallParticleAnimNums[BALL_MASTER]);
+            }
+        }
+        else if (mode == 1) {
+            u8 spriteId = CreateSprite(&sBallParticlesSpriteTemplates[BALL_MASTER], GetBattlerSpriteCoord(gBattleAnimTarget, BATTLER_COORD_X), GetBattlerSpriteCoord(gBattleAnimTarget, BATTLER_COORD_Y) - 16, subpriority);
+            if (spriteId != MAX_SPRITES)
+            {
+                gSprites[spriteId].sTransl_Speed = 32;
+                gSprites[spriteId].sTransl_DestX = GetBattlerSpriteCoord(gBattleAnimTarget, BATTLER_COORD_X) + sCaptureStar[i].xOffset;
+                gSprites[spriteId].sTransl_DestY = (GetBattlerSpriteCoord(gBattleAnimTarget, BATTLER_COORD_Y) - 16) + sCaptureStar[i].yOffset;
+                gSprites[spriteId].sTransl_ArcAmpl = sCaptureStar[i].amplitude;
+                InitAnimArcTranslation(&gSprites[spriteId]);
+                gSprites[spriteId].callback = SpriteCB_BallCaptureSuccessStar_NoFlicker;
+                StartSpriteAnim(&gSprites[spriteId], sBallParticleAnimNums[BALL_MASTER]);
+            }
         }
     }
 }
@@ -1298,6 +1338,12 @@ static void CreateStarsWhenBallClicks(struct Sprite *sprite)
 static void SpriteCB_BallCaptureSuccessStar(struct Sprite *sprite)
 {
     sprite->invisible = !sprite->invisible;
+    if (TranslateAnimHorizontalArc(sprite))
+        DestroySprite(sprite);
+}
+
+static void SpriteCB_BallCaptureSuccessStar_NoFlicker(struct Sprite* sprite)
+{
     if (TranslateAnimHorizontalArc(sprite))
         DestroySprite(sprite);
 }

@@ -81,6 +81,17 @@ FourIsland_EventScript_DaycareMan::
 	goto_if_eq VAR_RESULT, DAYCARE_ONE_MON, FourIsland_EventScript_CheckOnOneMon
 	goto_if_eq VAR_RESULT, DAYCARE_TWO_MONS, FourIsland_EventScript_CheckOnTwoMons
 	msgbox DayCare_Text_ImDaycareManSpeakToMyWife
+	compare VAR_EGG_CHAIN, 0
+	goto_if_eq NoEggChain
+	buffernumberstring 0, VAR_EGG_CHAIN
+	msgbox DayCare_Text_EggChainInfo, MSGBOX_DEFAULT
+NoEggChain:
+	compare VAR_CHAIN, 3
+	goto_if_lt NoChain
+	bufferspeciesname 0, VAR_SPECIESCHAINED
+	buffernumberstring 1, VAR_CHAIN
+	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
+NoChain:
 	release
 	end
 
@@ -89,9 +100,23 @@ FourIsland_EventScript_DaycareEggWaiting::
 	goto_if_eq VAR_RESULT, YES, FourIsland_EventScript_DaycareAcceptEgg
 	msgbox DayCare_Text_IWillKeepDoYouWantIt, MSGBOX_YESNO
 	goto_if_eq VAR_RESULT, YES, FourIsland_EventScript_DaycareAcceptEgg
+	compare VAR_0x8006, 5
+	goto_if_ne NotShiny @ If equal, then prompt about special egg
+	msgbox DayCare_Text_EggIsSpecialAreYouSure, MSGBOX_YESNO
+	compare VAR_RESULT, YES
+	goto_if_eq FourIsland_EventScript_DaycareAcceptEgg
+NotShiny:
 	msgbox DayCare_Text_IllKeepIt
 	clearflag FLAG_PENDING_DAYCARE_EGG
 	special RejectEggFromDayCare
+	buffernumberstring 0, VAR_EGG_CHAIN
+	msgbox DayCare_Text_EggChainInfo, MSGBOX_DEFAULT
+	compare VAR_CHAIN, 3
+	goto_if_lt NotChaining1
+	bufferspeciesname 0, VAR_SPECIESCHAINED
+	buffernumberstring 1, VAR_CHAIN
+	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
+NotChaining1:
 	release
 	end
 
@@ -112,12 +137,31 @@ FourIsland_EventScript_DaycareReceivedEgg::
 	msgbox DayCare_Text_TakeGoodCareOfIt
 	special GiveEggFromDaycare
 	clearflag FLAG_PENDING_DAYCARE_EGG
+	buffernumberstring 0, VAR_EGG_CHAIN
+	msgbox DayCare_Text_EggChainInfo, MSGBOX_DEFAULT
+	compare VAR_CHAIN, 3
+	goto_if_lt NoChaining
+	bufferspeciesname 0, VAR_SPECIESCHAINED
+	buffernumberstring 1, VAR_CHAIN
+	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
+NoChaining:
 	release
 	end
 
 FourIsland_EventScript_CheckOnOneMon::
 	special GetDaycareMonNicknames
 	msgbox DayCare_Text_YourMonIsDoingFine
+	compare VAR_EGG_CHAIN, 0
+	goto_if_eq NoEggChaining
+	buffernumberstring 0, VAR_EGG_CHAIN
+	msgbox DayCare_Text_EggChainInfo, MSGBOX_DEFAULT
+NoEggChaining:
+	compare VAR_CHAIN, 3
+	goto_if_lt SkipChaining
+	bufferspeciesname 0, VAR_SPECIESCHAINED
+	buffernumberstring 1, VAR_CHAIN
+	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
+SkipChaining:
 	release
 	end
 
@@ -128,6 +172,17 @@ FourIsland_EventScript_CheckOnTwoMons::
 	special ShowFieldMessageStringVar4
 	waitmessage
 	waitbuttonpress
+	compare VAR_EGG_CHAIN, 0
+	goto_if_eq NotEggChaining
+	buffernumberstring 0, VAR_EGG_CHAIN
+	msgbox DayCare_Text_EggChainInfo, MSGBOX_DEFAULT
+NotEggChaining:
+	compare VAR_CHAIN, 3
+	goto_if_lt NotChaining
+	bufferspeciesname 0, VAR_SPECIESCHAINED
+	buffernumberstring 1, VAR_CHAIN
+	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
+NotChaining:
 	release
 	end
 

@@ -3805,10 +3805,18 @@ u8 *GetMapName(u8 *dst0, u16 mapsec, u16 fill)
     u16 idx;
     if ((idx = mapsec - MAPSECS_KANTO) <= MAPSEC_SPECIAL_AREA - MAPSECS_KANTO)
     {
-        if (IsCeladonDeptStoreMapsec(mapsec) == TRUE)
+        if (IsCeladonDeptStoreMapsec(mapsec) == TRUE) {
             dst = StringCopy(dst0, sMapsecName_CELADONDEPT);
-        else
+        }
+        else if (mapsec == MAPSEC_ALTERING_CAVE) {
             dst = StringCopy(dst0, sMapNames[idx]);
+            *dst++ = CHAR_SPACE;
+            *dst++ = (u8)CHAR_0 + (VarGet(VAR_ALTERING_CAVE_WILD_SET) + 1); // 161 or A1 or '0'
+            *dst++ = EOS;
+        }
+        else {
+            dst = StringCopy(dst0, sMapNames[idx]);
+        }
     }
     else
     {

@@ -50,13 +50,15 @@ gBattleAI_ScriptsTable::
 	.4byte AI_FirstBattle
 
 AI_CheckBadMove::
-@	if_move MOVE_FISSURE, AI_CBM_CheckIfNegatesType  @ Improvement in Emerald
-@	if_move MOVE_HORN_DRILL, AI_CBM_CheckIfNegatesType
+	if_move MOVE_FISSURE, AI_CBM_CheckIfNegatesType  @ Improvement in Emerald
+	if_move MOVE_HORN_DRILL, AI_CBM_CheckIfNegatesType
 	get_how_powerful_move_is
 	if_equal MOVE_POWER_DISCOURAGED, AI_CheckBadMove_CheckSoundproof
 
 AI_CBM_CheckIfNegatesType::
-	if_type_effectiveness AI_EFFECTIVENESS_x0, Score_Minus10
+	if_type_effectiveness AI_EFFECTIVENESS_x0, Score_Minus30
+	if_type_effectiveness AI_EFFECTIVENESS_x0_5, Score_Minus5
+	if_type_effectiveness AI_EFFECTIVENESS_x0_25, Score_Minus30
 	get_ability AI_TARGET
 	if_equal ABILITY_VOLT_ABSORB, CheckIfVoltAbsorbCancelsElectric
 	if_equal ABILITY_WATER_ABSORB, CheckIfWaterAbsorbCancelsWater
@@ -82,11 +84,11 @@ CheckIfFlashFireCancelsFire::
 
 CheckIfWonderGuardCancelsMove::
 	if_type_effectiveness AI_EFFECTIVENESS_x2, AI_CheckBadMove_CheckSoundproof
-	goto Score_Minus10
+	goto Score_Minus30
 
 CheckIfLevitateCancelsGroundMove::
 	get_curr_move_type
-	if_equal_ TYPE_GROUND, Score_Minus10
+	if_equal_ TYPE_GROUND, Score_Minus12
 
 AI_CheckBadMove_CheckSoundproof::
 	get_ability AI_TARGET
@@ -211,6 +213,7 @@ AI_CheckBadMove_CheckEffect::
 	if_effect EFFECT_WATER_SPORT, AI_CBM_WaterSport
 	if_effect EFFECT_CALM_MIND, AI_CBM_CalmMind
 	if_effect EFFECT_DRAGON_DANCE, AI_CBM_DragonDance
+	if_effect EFFECT_GROWTH, AI_CBM_Growth
 	end
 
 AI_CBM_Sleep::
@@ -218,11 +221,11 @@ AI_CBM_Sleep::
 	if_equal ABILITY_INSOMNIA, Score_Minus10
 	if_equal ABILITY_VITAL_SPIRIT, Score_Minus10
 	if_status AI_TARGET, STATUS1_ANY, Score_Minus10
-@	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
+	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
 	end
 
 AI_CBM_Explosion::
-	if_type_effectiveness AI_EFFECTIVENESS_x0, Score_Minus10
+	if_type_effectiveness AI_EFFECTIVENESS_x0, Score_Minus30
 	get_ability AI_TARGET
 	if_equal ABILITY_DAMP, Score_Minus10
 	count_alive_pokemon AI_USER
@@ -287,8 +290,8 @@ AI_CBM_DefenseDown::
 
 AI_CBM_SpeedDown::
 	if_stat_level_equal AI_TARGET, STAT_SPEED, 0, Score_Minus10
-@	get_ability AI_TARGET  @ Improvement in Emerald
-@	if_equal ABILITY_SPEED_BOOST, Score_Minus10
+	get_ability AI_TARGET  @ Improvement in Emerald
+	if_equal ABILITY_SPEED_BOOST, Score_Minus10
 	goto CheckIfAbilityBlocksStatChange
 
 AI_CBM_SpAtkDown::
@@ -351,7 +354,7 @@ AI_CBM_Poison::
 	get_ability AI_TARGET
 	if_equal ABILITY_IMMUNITY, Score_Minus10
 	if_status AI_TARGET, STATUS1_ANY, Score_Minus10
-@	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
+	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
 	end
 
 AI_CBM_LightScreen::
@@ -391,7 +394,7 @@ AI_CBM_Confuse::
 	if_status2 AI_TARGET, STATUS2_CONFUSION, Score_Minus5
 	get_ability AI_TARGET
 	if_equal ABILITY_OWN_TEMPO, Score_Minus10
-@	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
+	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
 	end
 
 AI_CBM_Reflect::
@@ -403,7 +406,7 @@ AI_CBM_Paralyze::
 	get_ability AI_TARGET
 	if_equal ABILITY_LIMBER, Score_Minus10
 	if_status AI_TARGET, STATUS1_ANY, Score_Minus10
-@	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
+	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
 	end
 
 AI_CBM_Substitute::
@@ -504,7 +507,7 @@ AI_CBM_SunnyDay::
 
 AI_CBM_FutureSight::
 	if_side_affecting AI_TARGET, SIDE_STATUS_FUTUREATTACK, Score_Minus10
-@	if_side_affecting AI_USER, SIDE_STATUS_FUTUREATTACK, Score_Minus12  @ Improvement in Emerald
+	if_side_affecting AI_USER, SIDE_STATUS_FUTUREATTACK, Score_Minus12  @ Improvement in Emerald
 	end
 
 AI_CBM_FakeOut::
@@ -539,7 +542,7 @@ AI_CBM_WillOWisp::
 	if_type_effectiveness AI_EFFECTIVENESS_x0, Score_Minus10
 	if_type_effectiveness AI_EFFECTIVENESS_x0_5, Score_Minus10
 	if_type_effectiveness AI_EFFECTIVENESS_x0_25, Score_Minus10
-@	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
+	if_side_affecting AI_TARGET, SIDE_STATUS_SAFEGUARD, Score_Minus10  @ Improvement in Emerald
 	end
 
 AI_CBM_HelpingHand::
@@ -597,8 +600,14 @@ AI_CBM_CalmMind::
 	end
 
 AI_CBM_DragonDance::
-	if_stat_level_equal AI_USER, STAT_ATK, 12, Score_Minus10
-	if_stat_level_equal AI_USER, STAT_SPEED, 12, Score_Minus8
+	if_stat_level_equal AI_USER, STAT_ATK, MAX_STAT_STAGE, Score_Minus8
+	if_stat_level_equal AI_USER, STAT_SPATK, MAX_STAT_STAGE, Score_Minus8
+	if_stat_level_equal AI_USER, STAT_SPEED, MAX_STAT_STAGE, Score_Minus3
+	end
+
+AI_CBM_Growth::
+	if_stat_level_equal AI_USER, STAT_ATK, 12, Score_Minus8
+	if_stat_level_equal AI_USER, STAT_SPATK, 12, Score_Minus8
 	end
 
 Score_Minus1::
@@ -629,6 +638,10 @@ Score_Minus12::
 	score -12
 	end
 
+Score_Minus30::
+	score -30
+	end
+
 Score_Plus1::
 	score +1
 	end
@@ -646,9 +659,9 @@ Score_Plus5::
 	end
 
 @ Improvement in Emerald
-@Score_Plus10::
-@	score +10
-@	end
+Score_Plus10::
+	score +10
+	end
 
 AI_CheckViability::
 	if_effect EFFECT_SLEEP, AI_CV_Sleep
@@ -702,7 +715,7 @@ AI_CheckViability::
 	if_effect EFFECT_REFLECT, AI_CV_Reflect
 	if_effect EFFECT_POISON, AI_CV_Poison
 	if_effect EFFECT_PARALYZE, AI_CV_Paralyze
-	@ if_effect EFFECT_SWAGGER, AI_CV_Swagger  @ Improvement in Emerald
+	if_effect EFFECT_SWAGGER, AI_CV_Swagger  @ Improvement in Emerald
 	if_effect EFFECT_SPEED_DOWN_HIT, AI_CV_SpeedDownFromChance
 	if_effect EFFECT_SKY_ATTACK, AI_CV_ChargeUpMove
 	if_effect EFFECT_VITAL_THROW, AI_CV_VitalThrow
@@ -773,6 +786,7 @@ AI_CheckViability::
 	if_effect EFFECT_WATER_SPORT, AI_CV_WaterSport
 	if_effect EFFECT_CALM_MIND, AI_CV_SpDefUp
 	if_effect EFFECT_DRAGON_DANCE, AI_CV_DragonDance
+	if_effect EFFECT_GROWTH, AI_CV_Growth
 	end
 
 AI_CV_Sleep::
@@ -1547,8 +1561,8 @@ AI_CV_HighCrit_End::
 	end
 
 @ Improvement in Emerald
-@AI_CV_Swagger:
-@	if_has_move AI_USER, MOVE_PSYCH_UP, AI_CV_SwaggerHasPsychUp
+AI_CV_Swagger:
+	if_has_move AI_USER, MOVE_PSYCH_UP, AI_CV_SwaggerHasPsychUp
 
 AI_CV_Flatter::
 	if_random_less_than 128, AI_CV_Confuse
@@ -1569,19 +1583,19 @@ AI_CV_Confuse_End::
 	end
 
 @ Improvement in Emerald
-@AI_CV_SwaggerHasPsychUp:
-@	if_stat_level_more_than AI_TARGET, STAT_ATK, 3, AI_CV_SwaggerHasPsychUp_Minus5
-@	score +3
-@	get_turn_count
-@	if_not_equal 0, AI_CV_SwaggerHasPsychUp_End
-@	score +2
-@	goto AI_CV_SwaggerHasPsychUp_End
-@
-@AI_CV_SwaggerHasPsychUp_Minus5:
-@	score -5
-@
-@AI_CV_SwaggerHasPsychUp_End:
-@	end
+AI_CV_SwaggerHasPsychUp:
+	if_stat_level_more_than AI_TARGET, STAT_ATK, 3, AI_CV_SwaggerHasPsychUp_Minus5
+	score +3
+	get_turn_count
+	if_not_equal 0, AI_CV_SwaggerHasPsychUp_End
+	score +2
+	goto AI_CV_SwaggerHasPsychUp_End
+
+AI_CV_SwaggerHasPsychUp_Minus5:
+	score -5
+
+AI_CV_SwaggerHasPsychUp_End:
+	end
 
 AI_CV_Reflect::
 	if_hp_less_than AI_USER, 50, AI_CV_Reflect_ScoreDown2
@@ -1643,6 +1657,19 @@ AI_CV_VitalThrow2::
 	score -1
 
 AI_CV_VitalThrow_End::
+	if_stat_level_more_than AI_TARGET, STAT_EVASION, 10, AI_CV_VitalThrow_AlwaysHit_ScoreUp2
+	if_stat_level_less_than AI_USER, STAT_ACC, 2, AI_CV_VitalThrow_AlwaysHit_ScoreUp2
+	if_stat_level_more_than AI_TARGET, STAT_EVASION, 8, AI_CV_VitalThrow_AlwaysHit2
+	if_stat_level_less_than AI_USER, STAT_ACC, 4, AI_CV_VitalThrow_AlwaysHit2
+
+AI_CV_VitalThrow_AlwaysHit_ScoreUp2::
+	score +2
+
+AI_CV_VitalThrow_AlwaysHit2::
+	if_random_less_than 100, AI_CV_VitalThrow_AlwaysHit_End
+	score +1
+
+AI_CV_VitalThrow_AlwaysHit_End::
 	end
 
 AI_CV_Substitute::
@@ -1736,7 +1763,7 @@ AI_CV_Counter2::
 	score -1
 
 AI_CV_Counter3::
-@	if_has_move AI_USER, MOVE_MIRROR_COAT, AI_CV_Counter7  @ Improvement in Emerald
+	if_has_move AI_USER, MOVE_MIRROR_COAT, AI_CV_Counter7  @ Improvement in Emerald
 	get_last_used_move AI_TARGET
 	get_move_power_from_result
 	if_equal 0, AI_CV_Counter5
@@ -1765,12 +1792,12 @@ AI_CV_Counter6::
 	if_random_less_than 50, AI_CV_Counter_End
 
 @ Improvement in Emerald
-@AI_CV_Counter7:
-@	if_random_less_than 100, AI_CV_Counter8
-@	score +4
-@
-@AI_CV_Counter8:
-@	end
+AI_CV_Counter7:
+	if_random_less_than 100, AI_CV_Counter8
+	score +4
+
+AI_CV_Counter8:
+	end
 
 AI_CV_Counter_ScoreDown1::
 	score -1
@@ -1871,6 +1898,7 @@ AI_CV_Encore_EncouragedMovesToEncore::
 	.byte EFFECT_WATER_SPORT
 	.byte EFFECT_DRAGON_DANCE
 	.byte EFFECT_CAMOUFLAGE
+	.byte EFFECT_GROWTH
 	.byte -1
 
 AI_CV_PainSplit::
@@ -1903,8 +1931,8 @@ AI_CV_LockOn_End::
 	end
 
 AI_CV_SleepTalk::
-@	if_status AI_USER, STATUS1_SLEEP, Score_Plus10  @ Improvement in Emerald
-	score +2   @ Change to -5
+	if_status AI_USER, STATUS1_SLEEP, Score_Plus10  @ Improvement in Emerald
+	score -5   @ Change to -5
 	end
 
 AI_CV_DestinyBond::
@@ -2037,8 +2065,8 @@ AI_CV_Protect_ScoreUp2::
 	score +2
 
 AI_CV_Protect2::
-@	if_random_less_than 128, AI_CV_Protect4  @ Improvement in Emerald
-@	score -1
+	if_random_less_than 128, AI_CV_Protect4  @ Improvement in Emerald
+	score -1
 
 AI_CV_Protect4::
 	get_protect_count AI_USER
@@ -2059,12 +2087,14 @@ AI_CV_Protect_ScoreDown2::
 AI_CV_Protect_End::
 	end
 
+@ BUG: (fixed) Foresight is only encouraged if the user is Ghost type or
+@      has high evasion, but should check target instead
 AI_CV_Foresight::
-	get_user_type1
+	get_target_type1
 	if_equal TYPE_GHOST, AI_CV_Foresight2
-	get_user_type2
+	get_target_type2
 	if_equal TYPE_GHOST, AI_CV_Foresight2
-	if_stat_level_more_than AI_USER, STAT_EVASION, 8, AI_CV_Foresight3
+	if_stat_level_more_than AI_TARGET, STAT_EVASION, 8, AI_CV_Foresight3
 	score -2
 	goto AI_CV_Foresight_End
 
@@ -2230,9 +2260,9 @@ AI_CV_PsychUp_ScoreUp1::
 	score +1
 
 AI_CV_PsychUp3::
-	if_random_less_than 128, AI_CV_PsychUp_End  @ Remove this line
+@	if_random_less_than 128, AI_CV_PsychUp_End  @ Remove this line
 	score +1
-@	end  @ Improvement in Emerald
+	end  @ Improvement in Emerald
 
 AI_CV_PsychUp_ScoreDown2::
 	score -2
@@ -2254,7 +2284,7 @@ AI_CV_MirrorCoat2::
 	score -1
 
 AI_CV_MirrorCoat3::
-@	if_has_move AI_USER, MOVE_COUNTER, AI_CV_MirrorCoat_ScoreUp4  @ Improvement in Emerald
+	if_has_move AI_USER, MOVE_COUNTER, AI_CV_MirrorCoat_ScoreUp4  @ Improvement in Emerald
 	get_last_used_move AI_TARGET
 	get_move_power_from_result
 	if_equal 0, AI_CV_MirrorCoat5
@@ -2283,12 +2313,12 @@ AI_CV_MirrorCoat6::
 	if_random_less_than 50, AI_CV_MirrorCoat_End
 
 @ Improvement in Emerald
-@AI_CV_MirrorCoat_ScoreUp4:
-@	if_random_less_than 100, AI_CV_MirrorCoat_ScoreUp4_End
-@	score +4
-@
-@AI_CV_MirrorCoat_ScoreUp4_End:
-@	end
+AI_CV_MirrorCoat_ScoreUp4:
+	if_random_less_than 100, AI_CV_MirrorCoat_ScoreUp4_End
+	score +4
+
+AI_CV_MirrorCoat_ScoreUp4_End:
+	end
 
 AI_CV_MirrorCoat_ScoreDown1::
 	score -1
@@ -2326,7 +2356,7 @@ AI_CV_SemiInvulnerable::
 	score -1
 	goto AI_CV_SemiInvulnerable_End
 
-@ BUG: The scripts for checking type-resistance to weather for semi-invulnerable moves are swapped
+@ BUG: (fixed) The scripts for checking type-resistance to weather for semi-invulnerable moves are swapped
 @	  The result is that the AI is encouraged to stall while taking damage from weather
 @	  To fix, swap _CheckSandstormTypes/_CheckIceType in the below script
 AI_CV_SemiInvulnerable2::
@@ -2334,8 +2364,8 @@ AI_CV_SemiInvulnerable2::
 	if_status2 AI_TARGET, STATUS2_CURSED, AI_CV_SemiInvulnerable_TryEncourage
 	if_status3 AI_TARGET, STATUS3_LEECHSEED, AI_CV_SemiInvulnerable_TryEncourage
 	get_weather
-	if_equal AI_WEATHER_HAIL, AI_CV_SemiInvulnerable_CheckSandstormTypes
-	if_equal AI_WEATHER_SANDSTORM, AI_CV_SemiInvulnerable_CheckIceType
+	if_equal AI_WEATHER_HAIL, AI_CV_SemiInvulnerable_CheckIceType
+	if_equal AI_WEATHER_SANDSTORM, AI_CV_SemiInvulnerable_CheckSandstormTypes
 	goto AI_CV_SemiInvulnerable5
 
 AI_CV_SemiInvulnerable_CheckSandstormTypes::
@@ -2402,9 +2432,9 @@ AI_CV_Hail_ScoreDown1::
 AI_CV_Hail_End::
 	end
 
-@ BUG: Facade score is increased if the target is statused, but should be if the user is. Replace AI_TARGET with AI_USER
+@ BUG: (fixed) Facade score is increased if the target is statused, but should be if the user is. Replace AI_TARGET with AI_USER
 AI_CV_Facade::
-	if_not_status AI_TARGET, STATUS1_POISON | STATUS1_BURN | STATUS1_PARALYSIS | STATUS1_TOXIC_POISON, AI_CV_Facade_End
+	if_not_status AI_USER, STATUS1_POISON | STATUS1_BURN | STATUS1_PARALYSIS | STATUS1_TOXIC_POISON, AI_CV_Facade_End
 	score +1
 
 AI_CV_Facade_End::
@@ -2550,7 +2580,7 @@ AI_CV_MagicCoat2::
 	if_random_less_than 50, AI_CV_MagicCoat_End
 
 AI_CV_MagicCoat3::
-@	if_random_less_than 50, AI_CV_MagicCoat_End  @ Improvement in Emerald
+	if_random_less_than 50, AI_CV_MagicCoat_End  @ Improvement in Emerald
 
 AI_CV_MagicCoat4::
 	if_random_less_than 30, AI_CV_MagicCoat_End
@@ -2764,18 +2794,41 @@ AI_CV_DragonDance2::
 AI_CV_DragonDance_End::
 	end
 
+AI_CV_Growth::
+	if_stat_level_less_than AI_USER, STAT_ATK, 9, AI_CV_Growth2
+	if_stat_level_less_than AI_USER, STAT_SPATK, 9, AI_CV_Growth2
+	if_random_less_than 100, AI_CV_Growth3
+	score -1
+	goto AI_CV_Growth3
+
+AI_CV_Growth2::
+	if_hp_not_equal AI_USER, 100, AI_CV_Growth3
+	if_random_less_than 128, AI_CV_Growth3
+	score +2
+
+AI_CV_Growth3::
+	if_hp_more_than AI_USER, 70, AI_CV_Growth_End
+	if_hp_less_than AI_USER, 40, AI_CV_Growth_ScoreDown2
+	if_random_less_than 40, AI_CV_Growth_End
+
+AI_CV_Growth_ScoreDown2::
+	score -2
+
+AI_CV_Growth_End::
+	end
+
 AI_TryToFaint::
 	if_can_faint AI_TryToFaint_TryToEncourageQuickAttack
 	get_how_powerful_move_is
 	if_equal MOVE_NOT_MOST_POWERFUL, Score_Minus1
-@	if_type_effectiveness AI_EFFECTIVENESS_x4, AI_TryToFaint_DoubleSuperEffective  @ Improvement in Emerald
+	if_type_effectiveness AI_EFFECTIVENESS_x4, AI_TryToFaint_DoubleSuperEffective  @ Improvement in Emerald
 	end
 
 @ Improvement in Emerald
-@AI_TryToFaint_DoubleSuperEffective:
-@	if_random_less_than 80, AI_TryToFaint_End
-@	score +2
-@	end
+AI_TryToFaint_DoubleSuperEffective:
+	if_random_less_than 80, AI_TryToFaint_End
+	score +2
+	end
 
 AI_TryToFaint_TryToEncourageQuickAttack::
 	if_effect EFFECT_EXPLOSION, AI_TryToFaint_End
@@ -2855,6 +2908,7 @@ AI_SetupFirstTurn_SetupEffectsToEncourage::
 	.byte EFFECT_BULK_UP
 	.byte EFFECT_CALM_MIND
 	.byte EFFECT_CAMOUFLAGE
+	.byte EFFECT_GROWTH
 	.byte -1
 
 AI_PreferStrongestMove::
@@ -2907,47 +2961,186 @@ AI_PreferBatonPass::
 
 @ Improvement in Emerald (several below)
 AI_PreferBatonPass_GoForBatonPass::
-@	if_move MOVE_SWORDS_DANCE, AI_PreferBatonPass2
-@	if_move MOVE_DRAGON_DANCE, AI_PreferBatonPass2
-@	if_move MOVE_CALM_MIND, AI_PreferBatonPass2
-@	if_effect EFFECT_PROTECT, AI_PreferBatonPass3
-@	if_move MOVE_BATON_PASS, AI_PreferBatonPass_EncourageIfHighStats
+	if_move MOVE_SWORDS_DANCE, AI_PreferBatonPass2
+	if_move MOVE_DRAGON_DANCE, AI_PreferBatonPass2
+	if_move MOVE_CALM_MIND, AI_PreferBatonPass2
+	if_effect EFFECT_PROTECT, AI_PreferBatonPass3
+	if_move MOVE_BATON_PASS, AI_PreferBatonPass_EncourageIfHighStats
 	if_random_less_than 20, AI_Risky_End
 	score +3
 
-@AI_PreferBatonPass2:
-@	get_turn_count
-@	if_equal 0, Score_Plus5
-@	if_hp_less_than AI_USER, 60, Score_Minus10
-@	goto Score_Plus1
-@
-@AI_PreferBatonPass3::
-@	get_last_used_move AI_USER
-@	if_in_hwords AI_PreferBatonPass_ProtectMoves, Score_Minus2
-@	score +2
-@	end
-@
-@AI_PreferBatonPass_ProtectMoves:
-@   .2byte MOVE_PROTECT
-@   .2byte MOVE_DETECT
-@   .2byte -1
-@
-@AI_PreferBatonPass_EncourageIfHighStats:
-@	get_turn_count
-@	if_equal 0, Score_Minus2
-@	if_stat_level_more_than AI_USER, STAT_ATK, 8, Score_Plus3
-@	if_stat_level_more_than AI_USER, STAT_ATK, 7, Score_Plus2
-@	if_stat_level_more_than AI_USER, STAT_ATK, 6, Score_Plus1
-@	if_stat_level_more_than AI_USER, STAT_SPATK, 8, Score_Plus3
-@	if_stat_level_more_than AI_USER, STAT_SPATK, 7, Score_Plus2
-@	if_stat_level_more_than AI_USER, STAT_SPATK, 6, Score_Plus1
-@	end
+AI_PreferBatonPass2:
+	get_turn_count
+	if_equal 0, Score_Plus5
+	if_hp_less_than AI_USER, 60, Score_Minus10
+	goto Score_Plus1
+
+AI_PreferBatonPass3::
+	get_last_used_move AI_USER
+	if_in_hwords AI_PreferBatonPass_ProtectMoves, Score_Minus2
+	score +2
+	end
+
+AI_PreferBatonPass_ProtectMoves:
+   .2byte MOVE_PROTECT
+   .2byte MOVE_DETECT
+   .2byte -1
+
+AI_PreferBatonPass_EncourageIfHighStats:
+	get_turn_count
+	if_equal 0, Score_Minus2
+	if_stat_level_more_than AI_USER, STAT_ATK, 8, Score_Plus3
+	if_stat_level_more_than AI_USER, STAT_ATK, 7, Score_Plus2
+	if_stat_level_more_than AI_USER, STAT_ATK, 6, Score_Plus1
+	if_stat_level_more_than AI_USER, STAT_SPATK, 8, Score_Plus3
+	if_stat_level_more_than AI_USER, STAT_SPATK, 7, Score_Plus2
+	if_stat_level_more_than AI_USER, STAT_SPATK, 6, Score_Plus1
+	end
 
 AI_PreferBatonPass_End::
 	end
 
 @ Empty. Expanded in Emerald
 AI_DoubleBattle::
+	if_target_is_ally AI_TryOnAlly
+	if_move MOVE_SKILL_SWAP, AI_DoubleBattleSkillSwap
+	get_curr_move_type
+	if_move MOVE_EARTHQUAKE, AI_DoubleBattleAllHittingGroundMove
+	if_move MOVE_MAGNITUDE, AI_DoubleBattleAllHittingGroundMove
+	if_equal TYPE_ELECTRIC, AI_DoubleBattleElectricMove
+	if_equal TYPE_FIRE, AI_DoubleBattleFireMove
+	get_ability AI_USER
+	if_not_equal ABILITY_GUTS, AI_DoubleBattleCheckUserStatus
+	if_has_move AI_USER_PARTNER, MOVE_HELPING_HAND, AI_DoubleBattlePartnerHasHelpingHand
+	end
+
+AI_DoubleBattlePartnerHasHelpingHand:
+	get_how_powerful_move_is
+	if_not_equal 0, Score_Plus1
+	end
+
+AI_DoubleBattleCheckUserStatus:
+	if_status AI_USER, STATUS1_ANY, AI_DoubleBattleCheckUserStatus2
+	end
+
+AI_DoubleBattleCheckUserStatus2:
+	get_how_powerful_move_is
+	if_equal MOVE_POWER_DISCOURAGED, Score_Minus5
+	score +1
+	if_equal MOVE_MOST_POWERFUL, Score_Plus2
+	end
+
+AI_DoubleBattleAllHittingGroundMove:
+	if_ability AI_USER_PARTNER, ABILITY_LEVITATE, Score_Plus2
+	if_type AI_USER_PARTNER, TYPE_FLYING, Score_Plus2
+	if_type AI_USER_PARTNER, TYPE_FIRE, Score_Minus10
+	if_type AI_USER_PARTNER, TYPE_ELECTRIC, Score_Minus10
+	if_type AI_USER_PARTNER, TYPE_POISON, Score_Minus10
+	if_type AI_USER_PARTNER, TYPE_ROCK, Score_Minus10
+	goto Score_Minus3
+
+AI_DoubleBattleSkillSwap:
+	get_ability AI_USER
+	if_equal ABILITY_TRUANT, Score_Plus5
+	get_ability AI_TARGET
+	if_equal ABILITY_SHADOW_TAG, Score_Plus2
+	if_equal ABILITY_PURE_POWER, Score_Plus2
+	end
+
+AI_DoubleBattleElectricMove:
+	if_no_ability AI_TARGET_PARTNER, ABILITY_LIGHTNING_ROD, AI_DoubleBattleElectricMoveEnd
+	score -2
+	if_no_type AI_TARGET_PARTNER, TYPE_GROUND, AI_DoubleBattleElectricMoveEnd
+	score -8
+
+AI_DoubleBattleElectricMoveEnd:
+	end
+
+AI_DoubleBattleFireMove:
+	if_flash_fired AI_USER, AI_DoubleBattleFireMove2
+	end
+
+AI_DoubleBattleFireMove2:
+	goto Score_Plus1
+
+AI_TryOnAlly:
+	get_how_powerful_move_is
+	if_equal 0, AI_TryStatusMoveOnAlly
+	get_curr_move_type
+	if_equal TYPE_FIRE, AI_TryFireMoveOnAlly
+
+AI_DiscourageOnAlly:
+	goto Score_Minus30
+
+AI_TryFireMoveOnAlly:
+	if_ability AI_USER_PARTNER, ABILITY_FLASH_FIRE, AI_TryFireMoveOnAlly_FlashFire
+	goto AI_DiscourageOnAlly
+
+AI_TryFireMoveOnAlly_FlashFire:
+	if_flash_fired AI_USER_PARTNER, AI_DiscourageOnAlly
+	goto Score_Plus3
+
+AI_TryStatusMoveOnAlly:
+	if_move MOVE_SKILL_SWAP, AI_TrySkillSwapOnAlly
+	if_move MOVE_WILL_O_WISP, AI_TryStatusOnAlly
+	if_move MOVE_TOXIC, AI_TryStatusOnAlly
+	if_move MOVE_HELPING_HAND, AI_TryHelpingHandOnAlly
+	if_move MOVE_SWAGGER, AI_TrySwaggerOnAlly
+	goto Score_Minus30_
+
+AI_TrySkillSwapOnAlly:
+	get_ability AI_TARGET
+	if_equal ABILITY_TRUANT, Score_Plus10
+	get_ability AI_USER
+	if_not_equal ABILITY_LEVITATE, AI_TrySkillSwapOnAlly2
+	get_ability AI_TARGET
+	if_equal ABILITY_LEVITATE, Score_Minus30_
+	get_target_type1
+	if_not_equal TYPE_ELECTRIC, AI_TrySkillSwapOnAlly2
+	score +1
+	get_target_type2
+	if_not_equal TYPE_ELECTRIC, AI_TrySkillSwapOnAlly2
+	score +1
+	end
+
+AI_TrySkillSwapOnAlly2:
+	if_not_equal ABILITY_COMPOUND_EYES, Score_Minus30_
+	if_has_move AI_USER_PARTNER, MOVE_FIRE_BLAST, AI_TrySkillSwapOnAllyPlus3
+	if_has_move AI_USER_PARTNER, MOVE_THUNDER, AI_TrySkillSwapOnAllyPlus3
+	if_has_move AI_USER_PARTNER, MOVE_CROSS_CHOP, AI_TrySkillSwapOnAllyPlus3
+	if_has_move AI_USER_PARTNER, MOVE_HYDRO_PUMP, AI_TrySkillSwapOnAllyPlus3
+	if_has_move AI_USER_PARTNER, MOVE_DYNAMIC_PUNCH, AI_TrySkillSwapOnAllyPlus3
+	if_has_move AI_USER_PARTNER, MOVE_BLIZZARD, AI_TrySkillSwapOnAllyPlus3
+	if_has_move AI_USER_PARTNER, MOVE_MEGAHORN, AI_TrySkillSwapOnAllyPlus3
+	goto Score_Minus30_
+
+AI_TrySkillSwapOnAllyPlus3:
+	goto Score_Plus3
+
+AI_TryStatusOnAlly:
+	get_ability AI_TARGET
+	if_not_equal ABILITY_GUTS, Score_Minus30_
+	if_status AI_TARGET, STATUS1_ANY, Score_Minus30_
+	if_hp_less_than AI_USER, 91, Score_Minus30_
+	goto Score_Plus5
+
+AI_TryHelpingHandOnAlly:
+	if_random_less_than 64, Score_Minus1
+	goto Score_Plus2
+
+AI_TrySwaggerOnAlly:
+	if_holds_item AI_TARGET, ITEM_PERSIM_BERRY, AI_TrySwaggerOnAlly2
+	goto Score_Minus30_
+
+AI_TrySwaggerOnAlly2:
+	if_stat_level_more_than AI_TARGET, STAT_ATK, 7, AI_TrySwaggerOnAlly_End
+	score +3
+
+AI_TrySwaggerOnAlly_End:
+	end
+
+Score_Minus30_:
+	score -30
 	end
 
 AI_HPAware::
@@ -3054,6 +3247,7 @@ AI_HPAware_DiscouragedEffectsWhenMediumHP::
 	.byte EFFECT_BULK_UP
 	.byte EFFECT_CALM_MIND
 	.byte EFFECT_DRAGON_DANCE
+	.byte EFFECT_GROWTH
 	.byte -1
 
 AI_HPAware_DiscouragedEffectsWhenLowHP::
@@ -3104,6 +3298,7 @@ AI_HPAware_DiscouragedEffectsWhenLowHP::
 	.byte EFFECT_BULK_UP
 	.byte EFFECT_CALM_MIND
 	.byte EFFECT_DRAGON_DANCE
+	.byte EFFECT_GROWTH
 	.byte -1
 
 AI_HPAware_DiscouragedEffectsWhenTargetHighHP::
@@ -3149,6 +3344,7 @@ AI_HPAware_DiscouragedEffectsWhenTargetMediumHP::
 	.byte EFFECT_BULK_UP
 	.byte EFFECT_CALM_MIND
 	.byte EFFECT_DRAGON_DANCE
+	.byte EFFECT_GROWTH
 	.byte -1
 
 AI_HPAware_DiscouragedEffectsWhenTargetLowHP::
@@ -3211,11 +3407,13 @@ AI_HPAware_DiscouragedEffectsWhenTargetLowHP::
 	.byte EFFECT_BULK_UP
 	.byte EFFECT_CALM_MIND
 	.byte EFFECT_DRAGON_DANCE
+	.byte EFFECT_GROWTH
 	.byte -1
 
 AI_Unknown::
+	if_target_is_ally AI_TryOnAlly
 	if_not_effect EFFECT_SUNNY_DAY, AI_Unknown_End
-	if_equal 0, AI_Unknown_End
+@	if_equal 0, AI_Unknown_End  @ BUG: (fixed) funcResult has not been set in this script yet, below call is nonsense
 	is_first_turn_for AI_USER
 	if_equal 0, AI_Unknown_End
 	score +5
@@ -3234,6 +3432,7 @@ AI_Roaming::
 	if_equal ABILITY_ARENA_TRAP, AI_Roaming_End
 
 AI_Roaming_Flee::
+	if_random_less_than 200, AI_Roaming_End @ if rand() % 256 < 200, do not flee (~3/4 chance not to flee)
 	flee
 
 AI_Roaming_End::

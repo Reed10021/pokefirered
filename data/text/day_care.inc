@@ -35,6 +35,19 @@ DayCare_Text_ReceivedEgg::
 DayCare_Text_TakeGoodCareOfIt::
 	.string "Take good care of it.$"
 
+DayCare_Text_EggChainInfo::
+	.string "By the way, your current Egg\n"
+	.string "Chain count is {STR_VAR_1}.$"
+
+DayCare_Text_NormalChainInfo::
+	.string "It also looks like you're chaining\n"
+	.string "wild {STR_VAR_1}. Your Chain Level\p"
+	.string "for {STR_VAR_1} is {STR_VAR_2}.$"
+
+DayCare_Text_EggIsSpecialAreYouSure:
+	.string "I have a feeling this egg is special!\n"
+	.string "You really DO want this, right??$"
+
 DayCare_Text_SeeWifeIfYouWantToPickUpMon::
 	.string "ポケモンを　ひきとりたい　ときは\n"
 	.string "ばさんに　いって　おくれ$"

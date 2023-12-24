@@ -8,6 +8,10 @@ CeladonCity_GameCorner_Text_WelcomeBuySomeCoins::
     .string "Do you need some game COINS?\n"
     .string "Would you like to buy some?$"
 
+CeladonCity_GameCorner_Text_BuySomeMoreCoins::
+    .string "Do you need more game COINS?\p"
+    .string "Would you like to buy some?$"
+
 CeladonCity_GameCorner_Text_ComePlaySometime::
     .string "No?\n"
     .string "Please come play sometime!$"
@@ -23,9 +27,20 @@ CeladonCity_GameCorner_Text_CoinCaseIsFull::
 CeladonCity_GameCorner_Text_CantAffordCoins::
     .string "You can't afford the COINS.$"
 
+CeladonCity_GameCorner_Text_CantHoldMoney::
+    .string "You can't hold more money.$"
+
+CeladonCity_GameCorner_Text_DontHaveEnoughCoins::
+	.string "Um… You don't appear to have\n"
+	.string "enough COINS…$"
+
 CeladonCity_GameCorner_Text_HereAreYourCoins::
     .string "Thank you.\n"
     .string "Here are your COINS!$"
+
+CeladonCity_GameCorner_Text_HereIsYourMoney::
+    .string "Thank you.\n"
+    .string "Here is your money!$"
 
 CeladonCity_GameCorner_Text_RumoredTeamRocketRunsThisPlace::
     .string "Keep this quiet.\p"

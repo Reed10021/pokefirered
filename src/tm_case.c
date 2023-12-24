@@ -16,11 +16,13 @@
 #include "shop.h"
 #include "teachy_tv.h"
 #include "pokemon_storage_system.h"
+#include "pokemon_summary_screen.h"
 #include "party_menu.h"
 #include "data.h"
 #include "scanline_effect.h"
 #include "strings.h"
 #include "menu_indicators.h"
+#include "constants/moves.h"
 #include "constants/items.h"
 #include "constants/songs.h"
 #include "constants/quest_log.h"
@@ -40,6 +42,7 @@ enum {
     WIN_MESSAGE,
     WIN_SELL_QUANTITY,
     WIN_MONEY,
+    WIN_MOVE_CATEGORY
 };
 
 // Window IDs for the context menu that opens when a TM/HM is selected
@@ -323,6 +326,15 @@ static const struct WindowTemplate sWindowTemplates[] = {
         .paletteNum = 13,
         .baseBlock = 0x31d
     },
+    [WIN_MOVE_CATEGORY] = {
+        .bg = 1,
+        .tilemapLeft = 7,
+        .tilemapTop = 14,
+        .width = 2,
+        .height = 2,
+        .paletteNum = 9,
+        .baseBlock = 0x335
+    },
     DUMMY_WIN_TEMPLATE
 };
 
@@ -333,7 +345,7 @@ static const struct WindowTemplate sYesNoWindowTemplate = {
     .width = 6,
     .height = 4,
     .paletteNum = 15,
-    .baseBlock = 0x335
+    .baseBlock = 0x339
 };
 
 static const struct WindowTemplate sWindowTemplates_ContextMenu[] = {
@@ -719,13 +731,7 @@ static void List_ItemPrintFunc(u8 windowId, u32 itemIndex, u8 y)
 {
     if (itemIndex != LIST_CANCEL)
     {
-        if (!IS_HM(BagGetItemIdByPocketPosition(POCKET_TM_CASE, itemIndex)))
-        {
-            ConvertIntToDecimalStringN(gStringVar1, BagGetQuantityByPocketPosition(POCKET_TM_CASE, itemIndex), STR_CONV_MODE_RIGHT_ALIGN, 3);
-            StringExpandPlaceholders(gStringVar4, gText_TimesStrVar1);
-            TMCase_Print(windowId, FONT_SMALL, gStringVar4, 126, y, 0, 0, TEXT_SKIP_DRAW, COLOR_DARK);
-        }
-        else
+        if (BagGetItemIdByPocketPosition(POCKET_TM_CASE, itemIndex) >= ITEM_HM01)
         {
             PlaceHMTileInWindow(windowId, 8, y);
         }
@@ -981,7 +987,7 @@ static void Task_SelectedTMHM_Field(u8 taskId)
     StringAppend(strbuf, gText_Var1IsSelected + 2); // +2 skips over the stringvar
     TMCase_Print(WIN_SELECTED_MSG, FONT_NORMAL, strbuf, 0, 2, 1, 0, 0, COLOR_DARK);
     Free(strbuf);
-    if (IS_HM(gSpecialVar_ItemId))
+    if (gSpecialVar_ItemId >= ITEM_HM01)
     {
         PlaceHMTileInWindow(WIN_SELECTED_MSG, 0, 2);
         CopyWindowToVram(WIN_SELECTED_MSG, COPYWIN_GFX);
@@ -1047,6 +1053,7 @@ static void Action_Give(u8 taskId)
     PutWindowTilemap(WIN_DESCRIPTION);
     PutWindowTilemap(WIN_MOVE_INFO_LABELS);
     PutWindowTilemap(WIN_MOVE_INFO);
+    PutWindowTilemap(WIN_MOVE_CATEGORY);
     ScheduleBgCopyTilemapToVram(0);
     ScheduleBgCopyTilemapToVram(1);
     if (!IS_HM(itemId))
@@ -1100,6 +1107,7 @@ static void CloseMessageAndReturnToList(u8 taskId)
     PutWindowTilemap(WIN_DESCRIPTION);
     PutWindowTilemap(WIN_MOVE_INFO_LABELS);
     PutWindowTilemap(WIN_MOVE_INFO);
+    PutWindowTilemap(WIN_MOVE_CATEGORY);
     ScheduleBgCopyTilemapToVram(0);
     ScheduleBgCopyTilemapToVram(1);
     ReturnToList(taskId);
@@ -1117,6 +1125,7 @@ static void Action_Exit(u8 taskId)
     PutWindowTilemap(WIN_DESCRIPTION);
     PutWindowTilemap(WIN_MOVE_INFO_LABELS);
     PutWindowTilemap(WIN_MOVE_INFO);
+    PutWindowTilemap(WIN_MOVE_CATEGORY);
     ScheduleBgCopyTilemapToVram(0);
     ScheduleBgCopyTilemapToVram(1);
     ReturnToList(taskId);
@@ -1158,30 +1167,11 @@ static void Task_SelectedTMHM_Sell(u8 taskId)
 {
     s16 * data = gTasks[taskId].data;
 
-    if (ItemId_GetPrice(gSpecialVar_ItemId) == 0)
-    {
-        // Can't sell TM/HMs with no price (by default this is just the HMs)
-        CopyItemName(gSpecialVar_ItemId, gStringVar1);
-        StringExpandPlaceholders(gStringVar4, gText_OhNoICantBuyThat);
-        PrintMessageWithFollowupTask(taskId, GetDialogBoxFontId(), gStringVar4, CloseMessageAndReturnToList);
-    }
-    else
-    {
-        tQuantitySelected = 1;
-        if (tQuantityOwned == 1)
-        {
-            PrintPlayersMoney();
-            Task_AskConfirmSaleWithAmount(taskId);
-        }
-        else
-        {
-            if (tQuantityOwned > 99)
-                tQuantityOwned = 99;
-            CopyItemName(gSpecialVar_ItemId, gStringVar1);
-            StringExpandPlaceholders(gStringVar4, gText_HowManyWouldYouLikeToSell);
-            PrintMessageWithFollowupTask(taskId, GetDialogBoxFontId(), gStringVar4, Task_InitQuantitySelectUI);
-        }
-    }
+    // Can't sell TM/HMs with no price (by default this is just the HMs)
+    CopyItemName(gSpecialVar_ItemId, gStringVar1);
+    StringExpandPlaceholders(gStringVar4, gText_OhNoICantBuyThat);
+    PrintMessageWithFollowupTask(taskId, GetDialogBoxFontId(), gStringVar4, CloseMessageAndReturnToList);
+
 }
 
 static void Task_AskConfirmSaleWithAmount(u8 taskId)
@@ -1209,6 +1199,7 @@ static void Task_SaleOfTMsCanceled(u8 taskId)
     PutWindowTilemap(WIN_TITLE);
     PutWindowTilemap(WIN_MOVE_INFO_LABELS);
     PutWindowTilemap(WIN_MOVE_INFO);
+    PutWindowTilemap(WIN_MOVE_CATEGORY);
     ScheduleBgCopyTilemapToVram(0);
     ScheduleBgCopyTilemapToVram(1);
     PrintListCursor(tListTaskId, COLOR_DARK);
@@ -1220,7 +1211,7 @@ static void Task_InitQuantitySelectUI(u8 taskId)
     s16 * data = gTasks[taskId].data;
 
     TMCase_SetWindowBorder1(WIN_SELL_QUANTITY);
-    ConvertIntToDecimalStringN(gStringVar1, 1, STR_CONV_MODE_LEADING_ZEROS, 2);
+    ConvertIntToDecimalStringN(gStringVar1, 1, STR_CONV_MODE_LEADING_ZEROS, 3);
     StringExpandPlaceholders(gStringVar4, gText_TimesStrVar1);
     TMCase_Print(WIN_SELL_QUANTITY, FONT_SMALL, gStringVar4, 4, 10, 1, 0, 0, COLOR_DARK);
     SellTM_PrintQuantityAndSalePrice(1, ItemId_GetPrice(BagGetItemIdByPocketPosition(POCKET_TM_CASE, tSelection)) / 2 * tQuantitySelected);
@@ -1234,10 +1225,10 @@ static void Task_InitQuantitySelectUI(u8 taskId)
 static void SellTM_PrintQuantityAndSalePrice(s16 quantity, s32 amount)
 {
     FillWindowPixelBuffer(WIN_SELL_QUANTITY, 0x11);
-    ConvertIntToDecimalStringN(gStringVar1, quantity, STR_CONV_MODE_LEADING_ZEROS, 2);
+    ConvertIntToDecimalStringN(gStringVar1, quantity, STR_CONV_MODE_LEADING_ZEROS, 3);
     StringExpandPlaceholders(gStringVar4, gText_TimesStrVar1);
     TMCase_Print(WIN_SELL_QUANTITY, FONT_SMALL, gStringVar4, 4, 10, 1, 0, 0, COLOR_DARK);
-    PrintMoneyAmount(WIN_SELL_QUANTITY, 0x38, 0x0A, amount, 0);
+    PrintMoneyAmount(WIN_SELL_QUANTITY, 48, 0x0A, amount, 0);
 }
 
 static void Task_QuantitySelect_HandleInput(u8 taskId)
@@ -1315,6 +1306,7 @@ static void Task_AfterSale_ReturnToList(u8 taskId)
         PutWindowTilemap(WIN_TITLE);
         PutWindowTilemap(WIN_MOVE_INFO_LABELS);
         PutWindowTilemap(WIN_MOVE_INFO);
+        PutWindowTilemap(WIN_MOVE_CATEGORY);
         CloseMessageAndReturnToList(taskId);
     }
 }
@@ -1498,6 +1490,7 @@ static void InitWindowTemplatesAndPals(void)
     PutWindowTilemap(WIN_TITLE);
     PutWindowTilemap(WIN_MOVE_INFO_LABELS);
     PutWindowTilemap(WIN_MOVE_INFO);
+    PutWindowTilemap(WIN_MOVE_CATEGORY);
     ScheduleBgCopyTilemapToVram(0);
 }
 
@@ -1544,11 +1537,13 @@ static void PrintMoveInfo(u16 itemId)
     const u8 * str;
 
     FillWindowPixelRect(WIN_MOVE_INFO, 0, 0, 0, 40, 48);
+    FillWindowPixelBuffer(WIN_MOVE_CATEGORY, 0);
     if (itemId == ITEM_NONE)
     {
         for (i = 0; i < 4; i++)
             TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, gText_ThreeHyphens, 7, 12 * i, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
         CopyWindowToVram(WIN_MOVE_INFO, COPYWIN_GFX);
+        CopyWindowToVram(WIN_MOVE_CATEGORY, COPYWIN_GFX);
     }
     else
     {
@@ -1564,21 +1559,34 @@ static void PrintMoveInfo(u16 itemId)
             ConvertIntToDecimalStringN(gStringVar1, gBattleMoves[move].power, STR_CONV_MODE_RIGHT_ALIGN, 3);
             str = gStringVar1;
         }
-        TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, str, 7, 12, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
+        TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, str, 14, 12, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
+
+        // Print category
+        LoadPalette(sSplitIcons_Pal, 9 * 0x10, 0x20);
+        PutWindowTilemap(WIN_MOVE_CATEGORY);
+        BlitBitmapToWindow(WIN_MOVE_CATEGORY, sSplitIcons_Gfx + 0x80 * GetBattleMoveSplit(move), 0, 3, 16, 16);
+        CopyWindowToVram(WIN_MOVE_CATEGORY, COPYWIN_GFX);
 
         // Print accuracy
-        if (gBattleMoves[move].accuracy == 0)
+        if (gBattleMoves[move].accuracy == 0 ||
+            move == MOVE_ASSIST || move == MOVE_BLOCK || move == MOVE_CAMOUFLAGE || move == MOVE_CHARGE ||
+            move == MOVE_CONVERSION_2 || move == MOVE_FOLLOW_ME || move == MOVE_GRUDGE || move == MOVE_HELPING_HAND ||
+            move == MOVE_IMPRISON || move == MOVE_INGRAIN || move == MOVE_MAGIC_COAT || move == MOVE_MEAN_LOOK ||
+            move == MOVE_MEMENTO || move == MOVE_MIMIC || move == MOVE_MUD_SPORT || move == MOVE_NIGHTMARE ||
+            move == MOVE_PAIN_SPLIT || move == MOVE_RECYCLE || move == MOVE_REFRESH || move == MOVE_ROLE_PLAY ||
+            move == MOVE_SKILL_SWAP || move == MOVE_SLACK_OFF || move == MOVE_SNATCH || move == MOVE_SOFT_BOILED ||
+            move == MOVE_SPIDER_WEB || move == MOVE_TAIL_GLOW || move == MOVE_WATER_SPORT || move == MOVE_WISH || move == MOVE_YAWN)
             str = gText_ThreeHyphens;
         else
         {
             ConvertIntToDecimalStringN(gStringVar1, gBattleMoves[move].accuracy, STR_CONV_MODE_RIGHT_ALIGN, 3);
             str = gStringVar1;
         }
-        TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, str, 7, 24, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
+        TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, str, 14, 24, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
 
         // Print PP
         ConvertIntToDecimalStringN(gStringVar1, gBattleMoves[move].pp, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, gStringVar1, 7, 36, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
+        TMCase_Print(WIN_MOVE_INFO, FONT_NORMAL_COPY_2, gStringVar1, 14, 36, 0, 0, TEXT_SKIP_DRAW, COLOR_MOVE_INFO);
 
         CopyWindowToVram(WIN_MOVE_INFO, COPYWIN_GFX);
     }

@@ -6,10 +6,25 @@
 CeruleanCity_House4_MapScripts::
 	.byte 0
 
-CeruleanCity_House4_EventScript_WonderNewsBerryMan::
+CeruleanCity_House4_EventScript_OutbreakMan::
 	goto_if_questlog EventScript_ReleaseEnd
 	special QuestLog_CutRecording
 	lock
+	dotimebasedevents
+	special GetOutbreakMon
+	goto_if_eq VAR_RESULT, FALSE, CeruleanCity_House4_EventScript_WonderNewsBerryMan
+	goto_if_eq VAR_TEMP_0, 1, skipReaction
+	call CeruleanCity_House4_EventScript_MovementReactionToNews
+skipReaction:
+	msgbox CeruleanCity_House4_Text_AnOutbreak, MSGBOX_DEFAULT
+	setvar VAR_TEMP_0, 1
+	release
+	end
+
+CeruleanCity_House4_EventScript_WonderNewsBerryMan::
+@	goto_if_questlog EventScript_ReleaseEnd
+@	special QuestLog_CutRecording
+@	lock
 	specialvar REWARD_TYPE, WonderNews_GetRewardInfo
 	copyvar REWARD_ITEM, VAR_RESULT
 	goto_if_eq REWARD_TYPE, NEWS_REWARD_NONE,       CeruleanCity_House4_EventScript_NoNews

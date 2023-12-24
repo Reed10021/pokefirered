@@ -43,9 +43,13 @@
 #define FLAG_TEMP_1F     (TEMP_FLAGS_START + 0x1F)
 #define TEMP_FLAGS_END   FLAG_TEMP_1F
 
-#define FLAG_0x020               0x020
-#define FLAG_0x021               0x021
-#define FLAG_0x022               0x022
+// Unused?
+//#define FLAG_0x020             0x020
+#define FLAG_STARTER_TWO	     0x020
+//#define FLAG_0x021             0x021
+#define FLAG_STARTER_THREE       0x021
+//#define FLAG_0x022             0x022
+#define FLAG_OPPOSITE_FOSSIL     0x022
 #define FLAG_0x023               0x023
 #define FLAG_0x024               0x024
 #define FLAG_0x025               0x025
@@ -190,8 +194,10 @@
 #define FLAG_HIDE_SAFFRON_CITY_POKECENTER_SABRINA_JOURNALS 0x0AE
 
 // Unused?
-#define FLAG_0x0AF               0x0AF
-#define FLAG_0x0B0               0x0B0
+//#define FLAG_0x0AF             0x0AF
+#define FLAG_RUNNING_SHOES_TOGGLE 0x0AF
+//#define FLAG_0x0B0             0x0B0
+#define FLAG_PARTY_MOVES         0x0B0
 #define FLAG_0x0B1               0x0B1
 #define FLAG_0x0B2               0x0B2
 #define FLAG_0x0B3               0x0B3
@@ -528,9 +534,9 @@
 #define FLAG_HIDE_FIVE_ISLAND_LOST_CAVE_ROOM14_RARE_CANDY       0x1FC
 #define FLAG_HIDE_SEVEN_ISLAND_SEVAULT_CANYON_HOUSE_LUCKY_PUNCH 0x1FD
 #define FLAG_HIDE_SILPH_CO_4F_TM41                              0x1FE
+#define FLAG_HIDE_FOUR_ISLAND_ICEFALL_CAVE_B1F_HM08             0x1FF
 
 // Unused?
-#define FLAG_0x1FF               0x1FF
 #define FLAG_0x200               0x200
 #define FLAG_0x201               0x201
 #define FLAG_0x202               0x202
@@ -769,9 +775,9 @@
 #define FLAG_0x2E6                                       0x2E6
 #define FLAG_0x2E7                                       0x2E7
 #define FLAG_0x2E8                                       0x2E8
-#define FLAG_0x2E9                                       0x2E9
-#define FLAG_0x2EA                                       0x2EA
-#define FLAG_0x2EB                                       0x2EB
+#define FLAG_CAUGHT_RAIKOU                               0x2E9
+#define FLAG_CAUGHT_ENTEI                                0x2EA
+#define FLAG_CAUGHT_SUICUNE                              0x2EB
 #define FLAG_REVIVED_DOME                                0x2EC
 #define FLAG_REVIVED_HELIX                               0x2ED
 #define FLAG_REVIVED_AMBER                               0x2EE
@@ -794,8 +800,8 @@
 #define FLAG_OAKS_RATING_IS_VIA_PC                       0x2FF
 
 // Unused?
-#define FLAG_0x300               0x300
-#define FLAG_0x301               0x301
+#define FLAG_POKEMONPCMENU       0x300
+#define FLAG_FLASHBACKS_DISABLED 0x301
 #define FLAG_0x302               0x302
 #define FLAG_0x303               0x303
 #define FLAG_0x304               0x304
@@ -886,7 +892,7 @@
 #define FLAG_0x359               0x359
 #define FLAG_0x35A               0x35A
 #define FLAG_0x35B               0x35B
-#define FLAG_0x35C               0x35C
+#define FLAG_SET_WALL_CLOCK      0x35C
 #define FLAG_0x35D               0x35D
 #define FLAG_0x35E               0x35E
 #define FLAG_0x35F               0x35F
@@ -938,9 +944,10 @@
 #define FLAG_0x38D               0x38D
 #define FLAG_0x38E               0x38E
 #define FLAG_0x38F               0x38F
-#define FLAG_0x390               0x390
-#define FLAG_0x391               0x391
-#define FLAG_0x392               0x392
+#define DAILY_FLAGS_START                           (FLAG_0x38F + (8 - FLAG_0x38F % 8))
+#define FLAG_HIDDEN_ITEM_NAVEL_ROCK_SUMMIT_SACRED_ASH_DAILY 0x390
+#define FLAG_DAILY_PICKED_LOTO_TICKET                       0x391
+#define FLAG_DAILY_GENERATED_OUTBREAK                       0x392
 #define FLAG_0x393               0x393
 #define FLAG_0x394               0x394
 #define FLAG_0x395               0x395
@@ -1002,6 +1009,7 @@
 #define FLAG_0x3CD               0x3CD
 #define FLAG_0x3CE               0x3CE
 #define FLAG_0x3CF               0x3CF
+#define DAILY_FLAGS_END          (FLAG_0x3CF + (7 - FLAG_0x3CF % 8))
 #define FLAG_0x3D0               0x3D0
 #define FLAG_0x3D1               0x3D1
 #define FLAG_0x3D2               0x3D2
@@ -1189,7 +1197,8 @@
 #define FLAG_HIDDEN_ITEM_ROUTE14_PINAP_BERRY                               (FLAG_HIDDEN_ITEMS_START + 157)
 #define FLAG_HIDDEN_ITEM_MT_EMBER_EXTERIOR_FIRE_STONE                      (FLAG_HIDDEN_ITEMS_START + 158)
 #define FLAG_HIDDEN_ITEM_POKEMON_TOWER_7F_SOOTHE_BELL                      (FLAG_HIDDEN_ITEMS_START + 159)
-#define FLAG_HIDDEN_ITEM_NAVEL_ROCK_SUMMIT_SACRED_ASH                      (FLAG_HIDDEN_ITEMS_START + 160)
+//#define FLAG_HIDDEN_ITEM_NAVEL_ROCK_SUMMIT_SACRED_ASH                    (FLAG_HIDDEN_ITEMS_START + 160)
+#define FLAG_HIDDEN_ITEM_UNUSED_0xA0                                       (FLAG_HIDDEN_ITEMS_START + 160)
 #define FLAG_HIDDEN_ITEM_TWO_ISLAND_CAPE_BRINK_PP_MAX                      (FLAG_HIDDEN_ITEMS_START + 161)
 #define FLAG_HIDDEN_ITEM_MT_EMBER_EXTERIOR_ULTRA_BALL                      (FLAG_HIDDEN_ITEMS_START + 162)
 #define FLAG_HIDDEN_ITEM_THREE_ISLAND_DUNSPARCE_TUNNEL_NUGGET              (FLAG_HIDDEN_ITEMS_START + 163)
@@ -1394,7 +1403,7 @@
 #define FLAG_SYS_SAW_HELP_SYSTEM_INTRO                              (SYS_FLAGS + 0x3C)
 #define FLAG_0x83D                                                  (SYS_FLAGS + 0x3D)
 #define FLAG_OPENED_START_MENU                                      (SYS_FLAGS + 0x3E)
-#define FLAG_0x83F                                                  (SYS_FLAGS + 0x3F)
+#define FLAG_SYS_CLOCK_SET                                          (SYS_FLAGS + 0x3F)
 #define FLAG_SYS_NATIONAL_DEX                                       (SYS_FLAGS + 0x40)
 #define FLAG_SYS_PC_STORAGE_DISABLED                                (SYS_FLAGS + 0x41)
 #define FLAG_SYS_INFORMED_OF_LOCAL_WIRELESS_PLAYER                  (SYS_FLAGS + 0x42)

@@ -43,7 +43,7 @@ struct ListMenuOverride gListMenuOverride;
 struct ListMenuTemplate gMultiuseListMenuTemplate;
 
 static u8 ListMenuInitInternal(const struct ListMenuTemplate *listMenuTemplate, u16 cursorPos, u16 itemsAbove);
-static bool8 ListMenuChangeSelection(struct ListMenu *list, bool8 updateCursorAndCallCallback, u8 count, bool8 movingDown);
+static bool8 ListMenuChangeSelection(struct ListMenu *list, bool8 updateCursorAndCallCallback, u16 count, bool8 movingDown);
 static void ListMenuPrintEntries(struct ListMenu *list, u16 startIndex, u16 yOffset, u16 count);
 static void ListMenuDrawCursor(struct ListMenu *list);
 static void ListMenuCallSelectionChangedCallback(struct ListMenu *list, u8 onInit);
@@ -166,6 +166,8 @@ u8 ListMenuInitInRect(const struct ListMenuTemplate *listMenuTemplate, const str
 s32 ListMenu_ProcessInput(u8 listTaskId)
 {
     struct ListMenu *list = (struct ListMenu *)gTasks[listTaskId].data;
+    s32 currentPosition = list->cursorPos + list->itemsAbove;
+    u16 lastPositon = list->template.totalItems - 1;
 
     if (JOY_NEW(A_BUTTON))
     {
@@ -177,12 +179,19 @@ s32 ListMenu_ProcessInput(u8 listTaskId)
     }
     else if (gMain.newAndRepeatedKeys & DPAD_UP)
     {
-        ListMenuChangeSelection(list, TRUE, 1, FALSE);
+        if (currentPosition == 0 || (currentPosition == 1 && list->template.items[0].index == LIST_HEADER))
+            ListMenuChangeSelection(list, TRUE, lastPositon, TRUE);
+        else
+            ListMenuChangeSelection(list, TRUE, 1, FALSE);
+
         return LIST_NOTHING_CHOSEN;
     }
     else if (gMain.newAndRepeatedKeys & DPAD_DOWN)
     {
-        ListMenuChangeSelection(list, TRUE, 1, TRUE);
+        if (currentPosition == lastPositon)
+            ListMenuChangeSelection(list, TRUE, lastPositon, FALSE);
+        else
+            ListMenuChangeSelection(list, TRUE, 1, TRUE);
         return LIST_NOTHING_CHOSEN;
     }
     else // try to move by one window scroll
@@ -206,12 +215,18 @@ s32 ListMenu_ProcessInput(u8 listTaskId)
         }
         if (leftButton)
         {
-            ListMenuChangeSelection(list, TRUE, list->template.maxShowed, FALSE);
+            if (currentPosition == 0 || (currentPosition == 1 && list->template.items[0].index == LIST_HEADER))
+                ListMenuChangeSelection(list, TRUE, lastPositon, TRUE);
+            else
+                ListMenuChangeSelection(list, TRUE, list->template.maxShowed, FALSE);
             return LIST_NOTHING_CHOSEN;
         }
         else if (rightButton)
         {
-            ListMenuChangeSelection(list, TRUE, list->template.maxShowed, TRUE);
+            if (currentPosition == lastPositon)
+                ListMenuChangeSelection(list, TRUE, lastPositon, FALSE);
+            else
+                ListMenuChangeSelection(list, TRUE, list->template.maxShowed, TRUE);
             return LIST_NOTHING_CHOSEN;
         }
         else
@@ -555,10 +570,10 @@ static void ListMenuScroll(struct ListMenu *list, u8 count, bool8 movingDown)
     }
 }
 
-static bool8 ListMenuChangeSelection(struct ListMenu *list, bool8 updateCursorAndCallCallback, u8 count, bool8 movingDown)
+static bool8 ListMenuChangeSelection(struct ListMenu *list, bool8 updateCursorAndCallCallback, u16 count, bool8 movingDown)
 {
     u16 oldSelectedRow;
-    u8 selectionChange, i, cursorCount;
+    u16 selectionChange, i, cursorCount;
 
     oldSelectedRow = list->itemsAbove;
     cursorCount = 0;

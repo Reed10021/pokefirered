@@ -2,14 +2,14 @@ FuchsiaCity_SafariZone_Entrance_Text_WelcomeToSafariZone::
     .string "Welcome to the SAFARI ZONE!$"
 
 FuchsiaCity_SafariZone_Entrance_Text_PlaySafariGameFor500::
-    .string "For just ¥500, you can play the\n"
+    .string "For just ¥750, you can play the\n"
     .string "SAFARI GAME.\p"
     .string "You can roam the wide-open safari\n"
     .string "and catch what you like.\p"
     .string "Would you like to play?$"
 
 FuchsiaCity_SafariZone_Entrance_Text_ThatllBe500WeOnlyUseSpecialBalls::
-    .string "That'll be ¥500, please!\p"
+    .string "That'll be ¥750, please!\p"
     .string "We only use a special kind of \n"
     .string "POKé BALLS here.$"
 

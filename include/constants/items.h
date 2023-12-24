@@ -445,13 +445,46 @@
 #define ITEM_RUBY 373
 #define ITEM_SAPPHIRE 374
 
-#define ITEMS_COUNT 375
+// Emerald
+#define ITEM_MAGMA_EMBLEM 375
+#define ITEM_OLD_SEA_MAP 376
+
+// Mints
+#define ITEM_ADAMANT_MINT        377
+#define ITEM_BOLD_MINT           378
+#define ITEM_BRAVE_MINT          379
+#define ITEM_CALM_MINT           380
+#define ITEM_CAREFUL_MINT        381
+#define ITEM_GENTLE_MINT         382
+#define ITEM_HASTY_MINT          383
+#define ITEM_IMPISH_MINT         384
+#define ITEM_JOLLY_MINT          385
+#define ITEM_LAX_MINT            386
+#define ITEM_LONELY_MINT         387
+#define ITEM_MILD_MINT           388
+#define ITEM_MODEST_MINT         389
+#define ITEM_NAIVE_MINT          390
+#define ITEM_NAUGHTY_MINT        391
+#define ITEM_QUIET_MINT          392
+#define ITEM_RASH_MINT           393
+#define ITEM_RELAXED_MINT        394
+#define ITEM_SASSY_MINT          395
+#define ITEM_SERIOUS_MINT        396
+#define ITEM_TIMID_MINT          397
+
+#define ITEM_ABILITY_CAPSULE     398
+
+#define ITEMS_COUNT              399
 
 #define ITEM_TO_BERRY(itemId)(((itemId - FIRST_BERRY_INDEX) + 1))
 #define MAIL_NONE 0xFF
 
 #define NUM_TECHNICAL_MACHINES 50
 #define NUM_HIDDEN_MACHINES     8
+
+#define MAX_BAG_ITEM_CAPACITY  999
+#define BAG_ITEM_CAPACITY_DIGITS 3
+#define MAX_PC_ITEM_CAPACITY   999
 
 // Secondary IDs for rods
 #define OLD_ROD   0

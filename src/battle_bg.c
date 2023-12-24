@@ -205,7 +205,7 @@ static const struct WindowTemplate sStandardBattleWindowTemplates[] = {
     },
     [B_WIN_PP] = {
         .bg = 0,
-        .tilemapLeft = 21,
+        .tilemapLeft = 23,
         .tilemapTop = 55,
         .width = 3,
         .height = 2,
@@ -223,21 +223,21 @@ static const struct WindowTemplate sStandardBattleWindowTemplates[] = {
     },
     [B_WIN_PP_REMAINING] = {
         .bg = 0,
-        .tilemapLeft = 24,
+        .tilemapLeft = 25,
         .tilemapTop = 55,
-        .width = 5,
+        .width = 4,
         .height = 2,
         .paletteNum = 5,
         .baseBlock = 0x2a6
     },
-    [B_WIN_DUMMY] = {
+    [B_WIN_DUMMY] = { //Type indicator?
         .bg = 0,
-        .tilemapLeft = 25,
-        .tilemapTop = 57,
-        .width = 0,
-        .height = 0,
-        .paletteNum = 5,
-        .baseBlock = 0x2b0
+        .tilemapLeft = 21,
+        .tilemapTop = 55,
+        .width = 2,
+        .height = 2,
+        .paletteNum = 10,
+        .baseBlock = 0x2ae
     },
     [B_WIN_SWITCH_PROMPT] = {
         .bg = 0,
@@ -246,7 +246,7 @@ static const struct WindowTemplate sStandardBattleWindowTemplates[] = {
         .width = 8,
         .height = 4,
         .paletteNum = 5,
-        .baseBlock = 0x2b0
+        .baseBlock = 0x2b2
     },
     [B_WIN_LEVEL_UP_BOX] = {
         .bg = 1,
@@ -364,6 +364,15 @@ static const struct WindowTemplate sStandardBattleWindowTemplates[] = {
         .height = 4,
         .paletteNum = 7,
         .baseBlock = 0x090
+    },
+    [B_WIN_MOVE_DESC] = {
+        .bg = 0,
+        .tilemapLeft = 1,
+        .tilemapTop = 45,
+        .width = 18,
+        .height = 8,
+        .paletteNum = 5,
+        .baseBlock = 0x0350,
     },
     DUMMY_WIN_TEMPLATE
 };

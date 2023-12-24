@@ -136,6 +136,11 @@ static void Cmd_end(void);
 static void Cmd_if_level_compare(void);
 static void Cmd_if_target_taunted(void);
 static void Cmd_if_target_not_taunted(void);
+static void Cmd_check_ability(void);
+static void Cmd_is_of_type(void);
+static void Cmd_if_target_is_ally(void);
+static void Cmd_if_flash_fired(void);
+static void Cmd_if_holds_item(void);
 
 static void RecordLastUsedMoveByTarget(void);
 static void BattleAI_DoAIProcessing(void);
@@ -240,6 +245,11 @@ static const BattleAICmdFunc sBattleAICmdTable[] =
     Cmd_if_level_compare,                 // 0x5B
     Cmd_if_target_taunted,                // 0x5C
     Cmd_if_target_not_taunted,            // 0x5D
+    Cmd_if_target_is_ally,                // 0x5E
+    Cmd_is_of_type,                       // 0x5F
+    Cmd_check_ability,                    // 0x60
+    Cmd_if_flash_fired,                   // 0x61
+    Cmd_if_holds_item,                    // 0x62
 };
 
 static const u16 sDiscouragedPowerfulMoveEffects[] =
@@ -1215,7 +1225,7 @@ static void Cmd_get_highest_type_effectiveness(void)
 
         if (gCurrentMove != MOVE_NONE)
         {
-            TypeCalc(gCurrentMove, gBattlerAttacker, gBattlerTarget);
+            gMoveResultFlags = TypeCalc(gCurrentMove, gBattlerAttacker, gBattlerTarget);
 
             if (gBattleMoveDamage == 120) // Super effective STAB.
                 gBattleMoveDamage = AI_EFFECTIVENESS_x2;
@@ -1227,6 +1237,8 @@ static void Cmd_get_highest_type_effectiveness(void)
                 gBattleMoveDamage = AI_EFFECTIVENESS_x0_25;
 
             if (gMoveResultFlags & MOVE_RESULT_DOESNT_AFFECT_FOE)
+                gBattleMoveDamage = AI_EFFECTIVENESS_x0;
+            if (gMoveResultFlags & MOVE_RESULT_MISSED)
                 gBattleMoveDamage = AI_EFFECTIVENESS_x0;
 
             if (AI_THINKING_STRUCT->funcResult < gBattleMoveDamage)
@@ -1250,7 +1262,7 @@ static void Cmd_if_type_effectiveness(void)
     gBattleMoveDamage = AI_EFFECTIVENESS_x1;
     gCurrentMove = AI_THINKING_STRUCT->moveConsidered;
 
-    TypeCalc(gCurrentMove, gBattlerAttacker, gBattlerTarget);
+    gMoveResultFlags = TypeCalc(gCurrentMove, gBattlerAttacker, gBattlerTarget);
 
     if (gBattleMoveDamage == 120) // Super effective STAB.
         gBattleMoveDamage = AI_EFFECTIVENESS_x2;
@@ -1262,6 +1274,8 @@ static void Cmd_if_type_effectiveness(void)
         gBattleMoveDamage = AI_EFFECTIVENESS_x0_25;
 
     if (gMoveResultFlags & MOVE_RESULT_DOESNT_AFFECT_FOE)
+        gBattleMoveDamage = AI_EFFECTIVENESS_x0;
+    if (gMoveResultFlags & MOVE_RESULT_MISSED)
         gBattleMoveDamage = AI_EFFECTIVENESS_x0;
 
     // Store gBattleMoveDamage in a u8 variable because sAIScriptPtr[1] is a u8.
@@ -1521,6 +1535,9 @@ static void Cmd_if_cant_faint(void)
     gBattleMoveDamage = gBattleMoveDamage * AI_THINKING_STRUCT->simulatedRNG[AI_THINKING_STRUCT->movesetIndex] / 100;
 
     // This macro is missing the damage 0 = 1 assumption.
+    // Moves always do at least 1 damage.
+    if (gBattleMoveDamage == 0)
+        gBattleMoveDamage = 1;
 
     if (gBattleMons[gBattlerTarget].hp > gBattleMoveDamage)
         sAIScriptPtr = T1_READ_PTR(sAIScriptPtr + 1);
@@ -1944,6 +1961,138 @@ static void Cmd_if_target_not_taunted(void)
         sAIScriptPtr = T1_READ_PTR(sAIScriptPtr + 1);
     else
         sAIScriptPtr += 5;
+}
+
+
+static void Cmd_if_target_is_ally(void)
+{
+    if ((gActiveBattler & BIT_SIDE) == (gBattlerTarget & BIT_SIDE))
+        sAIScriptPtr = T1_READ_PTR(sAIScriptPtr + 1);
+    else
+        sAIScriptPtr += 5;
+}
+
+static u8 BattleAI_GetWantedBattler(u8 wantedBattler)
+{
+    switch (wantedBattler)
+    {
+    case AI_USER:
+        return gActiveBattler;
+    case AI_TARGET:
+    default:
+        return gBattlerTarget;
+    case AI_USER_PARTNER:
+        return gActiveBattler ^ BIT_FLANK;
+    case AI_TARGET_PARTNER:
+        return gBattlerTarget ^ BIT_FLANK;
+    }
+}
+
+static void Cmd_is_of_type(void)
+{
+    u8 battlerId = BattleAI_GetWantedBattler(sAIScriptPtr[1]);
+
+    if (IS_BATTLER_OF_TYPE(battlerId, sAIScriptPtr[2]))
+        AI_THINKING_STRUCT->funcResult = TRUE;
+    else
+        AI_THINKING_STRUCT->funcResult = FALSE;
+
+    sAIScriptPtr += 3;
+}
+
+static void Cmd_check_ability(void)
+{
+    u32 battlerId = BattleAI_GetWantedBattler(sAIScriptPtr[1]);
+    u32 ability = sAIScriptPtr[2];
+
+    if (sAIScriptPtr[1] == AI_TARGET || sAIScriptPtr[1] == AI_TARGET_PARTNER)
+    {
+        if (BATTLE_HISTORY->abilities[battlerId] != ABILITY_NONE)
+        {
+            ability = BATTLE_HISTORY->abilities[battlerId];
+            AI_THINKING_STRUCT->funcResult = ability;
+        }
+        // Abilities that prevent fleeing.
+        else if (gBattleMons[battlerId].ability == ABILITY_SHADOW_TAG
+            || gBattleMons[battlerId].ability == ABILITY_MAGNET_PULL
+            || gBattleMons[battlerId].ability == ABILITY_ARENA_TRAP)
+        {
+            ability = gBattleMons[battlerId].ability;
+        }
+        else if (gSpeciesInfo[gBattleMons[battlerId].species].abilities[0] != ABILITY_NONE)
+        {
+            if (gSpeciesInfo[gBattleMons[battlerId].species].abilities[1] != ABILITY_NONE)
+            {
+                u8 abilityDummyVariable = ability; // Needed to match.
+                if (gSpeciesInfo[gBattleMons[battlerId].species].abilities[0] != abilityDummyVariable
+                    && gSpeciesInfo[gBattleMons[battlerId].species].abilities[1] != abilityDummyVariable)
+                {
+                    ability = gSpeciesInfo[gBattleMons[battlerId].species].abilities[0];
+                }
+                else
+                {
+                    ability = ABILITY_NONE;
+                }
+            }
+            else
+            {
+                ability = gSpeciesInfo[gBattleMons[battlerId].species].abilities[0];
+            }
+        }
+        else
+        {
+            ability = gSpeciesInfo[gBattleMons[battlerId].species].abilities[1]; // AI can't actually reach this part since no pokemon has ability 2 and no ability 1.
+        }
+    }
+    else
+    {
+        // The AI knows its own or partner's ability.
+        ability = gBattleMons[battlerId].ability;
+    }
+
+    if (ability == 0)
+        AI_THINKING_STRUCT->funcResult = 2; // Unable to answer.
+    else if (ability == sAIScriptPtr[2])
+        AI_THINKING_STRUCT->funcResult = 1; // Pokemon has the ability we wanted to check.
+    else
+        AI_THINKING_STRUCT->funcResult = 0; // Pokemon doesn't have the ability we wanted to check.
+
+    sAIScriptPtr += 3;
+}
+
+static void Cmd_if_flash_fired(void)
+{
+    u8 battlerId = BattleAI_GetWantedBattler(sAIScriptPtr[1]);
+
+    if (gBattleResources->flags->flags[battlerId] & RESOURCE_FLAG_FLASH_FIRE)
+        sAIScriptPtr = T1_READ_PTR(sAIScriptPtr + 2);
+    else
+        sAIScriptPtr += 6;
+}
+
+static void Cmd_if_holds_item(void)
+{
+    u8 battlerId = BattleAI_GetWantedBattler(sAIScriptPtr[1]);
+    u16 item;
+    u8 var1, var2;
+
+    if ((battlerId & BIT_SIDE) == (gActiveBattler & BIT_SIDE))
+        item = gBattleMons[battlerId].item;
+    else
+        item = BATTLE_HISTORY->itemEffects[battlerId];
+
+    // UB: doesn't properly read an unaligned u16
+    var2 = sAIScriptPtr[2];
+    var1 = sAIScriptPtr[3];
+
+    //if ((var1 | var2) == item)
+    // This bug doesn't affect the vanilla game because this script command
+    // is only used to check ITEM_PERSIM_BERRY, whose high byte happens to
+    // be 0.
+    if (((var2 << 8) | var1) == item)
+        sAIScriptPtr = T1_READ_PTR(sAIScriptPtr + 4);
+    else
+        sAIScriptPtr += 8;
 }
 
 static void AIStackPushVar(const u8 *var)

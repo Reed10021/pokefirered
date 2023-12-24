@@ -341,8 +341,8 @@
 #define MUS_SEVII_ROUTE           333 // MUS_RG_NANASHIMA
 #define MUS_SEVII_DUNGEON         334 // MUS_RG_NANAISEKI
 #define MUS_SEVII_123             335 // MUS_RG_NANA123
-#define MUS_SEVII_45              336 // MUS_RG_NANA45
-#define MUS_SEVII_67              337 // MUS_RG_NANA67
+#define MUS_SEVII_45              336 // MUS_RG_NANA45 //Azalea/Blockthorn?
+#define MUS_SEVII_67              337 // MUS_RG_NANA67 //Violet/Olivine?
 #define MUS_POKE_FLUTE            338 // MUS_RG_POKEFUE
 #define MUS_VS_DEOXYS             339 // MUS_RG_VS_DEO
 #define MUS_VS_MEWTWO             340 // MUS_RG_VS_MYU2

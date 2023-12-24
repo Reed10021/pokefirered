@@ -206,6 +206,7 @@ bool8 AdjustQuantityAccordingToDPadInput(s16 *quantity_p, u16 qmax)
         (*quantity_p) += 10;
         if ((*quantity_p) > qmax)
             (*quantity_p) = qmax;
+
         if ((*quantity_p) == valBefore)
         {
             return FALSE;
@@ -221,6 +222,7 @@ bool8 AdjustQuantityAccordingToDPadInput(s16 *quantity_p, u16 qmax)
         (*quantity_p) -= 10;
         if ((*quantity_p) <= 0)
             (*quantity_p) = 1;
+
         if ((*quantity_p) == valBefore)
         {
             return FALSE;

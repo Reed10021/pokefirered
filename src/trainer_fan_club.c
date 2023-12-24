@@ -196,7 +196,7 @@ static void TryLoseFansFromPlayTime(struct TrainerFanClub *fanClub)
     u8 i = 0;
     u16 timer;
 
-    if (gSaveBlock2Ptr->playTimeHours < 999)
+    if (gSaveBlock2Ptr->playTimeHours < 64999)
     {
         while (1)
         {

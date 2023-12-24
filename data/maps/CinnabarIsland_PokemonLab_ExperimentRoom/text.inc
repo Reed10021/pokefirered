@@ -44,6 +44,10 @@ CinnabarIsland_PokemonLab_ExperimentRoom_Text_FossilMonBackToLife::
     .string "Your fossil is back to life!\n"
     .string "It was {STR_VAR_1} like I think!$"
 
+CinnabarIsland_PokemonLab_ExperimentRoom_Text_HoldingItem::
+    .string "Oh.\n"
+    .string "{STR_VAR_1} was holding item.$"
+
 CinnabarIsland_PokemonLab_ExperimentRoom_Text_ReceivedMonFromDoctor::
     .string "{PLAYER} received the {STR_VAR_1}\n"
     .string "from the doctor.$"

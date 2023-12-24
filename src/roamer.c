@@ -1,4 +1,7 @@
 #include "global.h"
+#include "daycare.h"
+#include "event_data.h"
+#include "pokedex.h"
 #include "random.h"
 #include "overworld.h"
 #include "field_specials.h"
@@ -79,32 +82,102 @@ void ClearRoamerData(void)
     }
 }
 
-#define GetRoamerSpecies() ({\
-    u16 a;\
-    switch (GetStarterSpecies())\
-    {\
-    default:\
-        a = SPECIES_RAIKOU;\
-        break;\
-    case SPECIES_BULBASAUR:\
-        a = SPECIES_ENTEI;\
-        break;\
-    case SPECIES_CHARMANDER:\
-        a = SPECIES_SUICUNE;\
-        break;\
-    }\
-    a;\
-})
+u16 GetRoamerSpecies(void)
+{
+    u16 species = SPECIES_NONE;
+    u16 starter = GetStarterSpecies();
+
+    switch (starter)
+    {
+    case SPECIES_BULBASAUR:
+        if (!FlagGet(FLAG_CAUGHT_ENTEI))
+        {
+            species = SPECIES_ENTEI;
+            gSpecialVar_0x8003 = SPECIES_ENTEI;
+        }
+        else if (!FlagGet(FLAG_CAUGHT_SUICUNE))
+        {
+            species = SPECIES_SUICUNE;
+            gSpecialVar_0x8003 = SPECIES_SUICUNE;
+        }
+        else if (!FlagGet(FLAG_CAUGHT_RAIKOU))
+        {
+            species = SPECIES_RAIKOU;
+            gSpecialVar_0x8003 = SPECIES_RAIKOU;
+        }
+        break;
+    case SPECIES_CHARMANDER:
+        if (!FlagGet(FLAG_CAUGHT_SUICUNE))
+        {
+            species = SPECIES_SUICUNE;
+            gSpecialVar_0x8003 = SPECIES_SUICUNE;
+        }
+        else if (!FlagGet(FLAG_CAUGHT_RAIKOU))
+        {
+            species = SPECIES_RAIKOU;
+            gSpecialVar_0x8003 = SPECIES_RAIKOU;
+        }
+        else if (!FlagGet(FLAG_CAUGHT_ENTEI))
+        {
+            species = SPECIES_ENTEI;
+            gSpecialVar_0x8003 = SPECIES_ENTEI;
+        }
+        break;
+    case SPECIES_SQUIRTLE:
+        if (!FlagGet(FLAG_CAUGHT_RAIKOU))
+        {
+            species = SPECIES_RAIKOU;
+            gSpecialVar_0x8003 = SPECIES_RAIKOU;
+        }
+        else if (!FlagGet(FLAG_CAUGHT_ENTEI))
+        {
+            species = SPECIES_ENTEI;
+            gSpecialVar_0x8003 = SPECIES_ENTEI;
+        }
+        else if (!FlagGet(FLAG_CAUGHT_SUICUNE))
+        {
+            species = SPECIES_SUICUNE;
+            gSpecialVar_0x8003 = SPECIES_SUICUNE;
+        }
+        break;
+    }
+    SetSeenMon();
+    return species;
+}
 
 void CreateInitialRoamerMon(void)
 {
     struct Pokemon * mon = &gEnemyParty[0];
     u16 species = GetRoamerSpecies();
-    CreateMon(mon, species, 50, USE_RANDOM_IVS, FALSE, 0, OT_ID_PLAYER_ID, 0);
+    u8 roamerCount = 0;
+    u8 roamerLevel = 0;
+
+    if (FlagGet(FLAG_CAUGHT_ENTEI))
+        roamerCount++;
+    if (FlagGet(FLAG_CAUGHT_RAIKOU))
+        roamerCount++;
+    if (FlagGet(FLAG_CAUGHT_SUICUNE))
+        roamerCount++;
+
+    switch (roamerCount) {
+        case 0:
+            roamerLevel = 40;
+            break;
+        case 1:
+            roamerLevel = 45;
+            break;
+        default:
+            roamerLevel = 50;
+            break;
+    }
     ROAMER->species = species;
-    ROAMER->level = 50;
-    ROAMER->status = 0;
     ROAMER->active = TRUE;
+
+    GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), FLAG_SET_SEEN);
+    CreateMon(mon, species, roamerLevel, USE_RANDOM_IVS, FALSE, 0, OT_ID_PLAYER_ID, 0);
+
+    ROAMER->level = roamerLevel;
+    ROAMER->status = 0;
     ROAMER->ivs = GetMonData(mon, MON_DATA_IVS);
     ROAMER->personality = GetMonData(mon, MON_DATA_PERSONALITY);
     ROAMER->hp = GetMonData(mon, MON_DATA_MAX_HP);
@@ -119,8 +192,47 @@ void CreateInitialRoamerMon(void)
 
 void InitRoamer(void)
 {
+    if (ROAMER->active)
+        return;
+    if (FlagGet(FLAG_CAUGHT_RAIKOU) && FlagGet(FLAG_CAUGHT_ENTEI) && FlagGet(FLAG_CAUGHT_SUICUNE))
+        return;
+
     ClearRoamerData();
     CreateInitialRoamerMon();
+}
+
+bool16 CheckShinyRoamer(void)
+{
+    if (!ROAMER->active)
+    {
+        gSpecialVar_Result = FALSE;
+        return;
+    }
+
+    {
+        u32 value = gSaveBlock2Ptr->playerTrainerId[0]
+            | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
+            | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
+            | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
+        u32 shinyValue = (HIHALF(value) ^ LOHALF(value) ^ HIHALF(ROAMER->personality) ^ LOHALF(ROAMER->personality));
+
+        gSpecialVar_Result =  shinyValue < SHINY_ODDS;
+        return;
+    }
+}
+
+bool8 IsRoamerActive(void)
+{
+    return ROAMER->active;
+}
+
+u16 GetSpeciesFromRoamer(void)
+{
+    if (!ROAMER->active)
+        gSpecialVar_Result = SPECIES_NONE;
+    else
+        gSpecialVar_Result = ROAMER->species;
+    return gSpecialVar_Result;
 }
 
 void UpdateLocationHistoryForRoamer(void)
@@ -169,6 +281,10 @@ void RoamerMove(void)
     else
     {
         if (!ROAMER->active)
+            return;
+
+        // Chance for roamer to not move
+        if (Random() % 3 != 0)
             return;
 
         while (locSet < NUM_LOCATION_SETS)
@@ -227,7 +343,7 @@ void CreateRoamerMonInstance(void)
 
 bool8 TryStartRoamerEncounter(void)
 {
-    if (IsRoamerAt(gSaveBlock1Ptr->location.mapGroup, gSaveBlock1Ptr->location.mapNum) == TRUE && (Random() % 4) == 0)
+    if (IsRoamerAt(gSaveBlock1Ptr->location.mapGroup, gSaveBlock1Ptr->location.mapNum) == TRUE && (Random() % 3) == 0)
     {
         CreateRoamerMonInstance();
         return TRUE;

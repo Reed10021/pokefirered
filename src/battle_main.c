@@ -14,6 +14,8 @@
 #include "decompress.h"
 #include "event_data.h"
 #include "evolution_scene.h"
+#include "field_message_box.h"
+#include "field_specials.h"
 #include "graphics.h"
 #include "help_system.h"
 #include "item.h"
@@ -29,6 +31,7 @@
 #include "roamer.h"
 #include "safari_zone.h"
 #include "scanline_effect.h"
+#include "strings.h"
 #include "task.h"
 #include "trig.h"
 #include "vs_seeker.h"
@@ -63,6 +66,7 @@ static void HandleEndTurn_BattleLost(void);
 static void HandleEndTurn_RanFromBattle(void);
 static void HandleEndTurn_MonFled(void);
 static void HandleEndTurn_FinishBattle(void);
+static bool8 partyMonHoldDoublePrizeEffect(void);
 static void CB2_InitBattleInternal(void);
 static void CB2_PreInitMultiBattle(void);
 static void CB2_HandleStartMultiBattle(void);
@@ -214,6 +218,7 @@ EWRAM_DATA u8 gBattlerStatusSummaryTaskId[MAX_BATTLERS_COUNT] = {0};
 EWRAM_DATA u8 gBattlerInMenuId = 0;
 EWRAM_DATA bool8 gDoingBattleAnim = FALSE;
 EWRAM_DATA u32 gTransformedPersonalities[MAX_BATTLERS_COUNT] = {0};
+EWRAM_DATA u8 gPlayerDpadHoldFrames = 0;
 EWRAM_DATA struct BattleSpriteData *gBattleSpritesDataPtr = NULL;
 EWRAM_DATA struct MonSpritesGfx *gMonSpritesGfxPtr = NULL;
 EWRAM_DATA u16 gBattleMovePower = 0;
@@ -327,6 +332,7 @@ const u8 gTypeEffectiveness[336] =
     TYPE_WATER, TYPE_GROUND, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_WATER, TYPE_ROCK, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_WATER, TYPE_DRAGON, TYPE_MUL_NOT_EFFECTIVE,
+    TYPE_WATER, TYPE_ICE, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ELECTRIC, TYPE_WATER, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_ELECTRIC, TYPE_ELECTRIC, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ELECTRIC, TYPE_GRASS, TYPE_MUL_NOT_EFFECTIVE,
@@ -349,7 +355,7 @@ const u8 gTypeEffectiveness[336] =
     TYPE_ICE, TYPE_GROUND, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_ICE, TYPE_FLYING, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_ICE, TYPE_DRAGON, TYPE_MUL_SUPER_EFFECTIVE,
-    TYPE_ICE, TYPE_STEEL, TYPE_MUL_NOT_EFFECTIVE,
+    //TYPE_ICE, TYPE_STEEL, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ICE, TYPE_FIRE, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_FIGHTING, TYPE_NORMAL, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_FIGHTING, TYPE_ICE, TYPE_MUL_SUPER_EFFECTIVE,
@@ -395,7 +401,8 @@ const u8 gTypeEffectiveness[336] =
     TYPE_BUG, TYPE_DARK, TYPE_MUL_SUPER_EFFECTIVE,
     TYPE_BUG, TYPE_STEEL, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ROCK, TYPE_FIRE, TYPE_MUL_SUPER_EFFECTIVE,
-    TYPE_ROCK, TYPE_ICE, TYPE_MUL_SUPER_EFFECTIVE,
+    //TYPE_ROCK, TYPE_ICE, TYPE_MUL_SUPER_EFFECTIVE,
+    TYPE_ROCK, TYPE_ICE, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ROCK, TYPE_FIGHTING, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ROCK, TYPE_GROUND, TYPE_MUL_NOT_EFFECTIVE,
     TYPE_ROCK, TYPE_FLYING, TYPE_MUL_SUPER_EFFECTIVE,
@@ -450,110 +457,110 @@ const u8 gTypeNames[NUMBER_OF_MON_TYPES][TYPE_NAME_LENGTH + 1] =
 // This is a factor in how much money you get for beating a trainer.
 const struct TrainerMoney gTrainerMoneyTable[] =
 {
-    {TRAINER_CLASS_LEADER, 25},
-    {TRAINER_CLASS_ELITE_FOUR, 25},
-    {TRAINER_CLASS_PKMN_PROF, 25},
-    {TRAINER_CLASS_RIVAL_EARLY, 4},
-    {TRAINER_CLASS_RIVAL_LATE, 9},
-    {TRAINER_CLASS_CHAMPION, 25},
-    {TRAINER_CLASS_YOUNGSTER, 4},
-    {TRAINER_CLASS_BUG_CATCHER, 3},
-    {TRAINER_CLASS_HIKER, 9},
-    {TRAINER_CLASS_BIRD_KEEPER, 6},
-    {TRAINER_CLASS_PICNICKER, 5},
-    {TRAINER_CLASS_SUPER_NERD, 6},
-    {TRAINER_CLASS_FISHERMAN, 9},
+    {TRAINER_CLASS_LEADER, 50},
+    {TRAINER_CLASS_ELITE_FOUR, 50},
+    {TRAINER_CLASS_PKMN_PROF, 50},
+    {TRAINER_CLASS_RIVAL_EARLY, 8},
+    {TRAINER_CLASS_RIVAL_LATE, 18},
+    {TRAINER_CLASS_CHAMPION, 100},
+    {TRAINER_CLASS_YOUNGSTER, 8},
+    {TRAINER_CLASS_BUG_CATCHER, 6},
+    {TRAINER_CLASS_HIKER, 18},
+    {TRAINER_CLASS_BIRD_KEEPER, 12},
+    {TRAINER_CLASS_PICNICKER, 10},
+    {TRAINER_CLASS_SUPER_NERD, 12},
+    {TRAINER_CLASS_FISHERMAN, 18},
     {TRAINER_CLASS_TEAM_ROCKET, 8},
-    {TRAINER_CLASS_LASS, 4},
-    {TRAINER_CLASS_BEAUTY, 18},
-    {TRAINER_CLASS_BLACK_BELT, 6},
-    {TRAINER_CLASS_CUE_BALL, 6},
-    {TRAINER_CLASS_CHANNELER, 8},
-    {TRAINER_CLASS_ROCKER, 6},
-    {TRAINER_CLASS_GENTLEMAN, 18},
-    {TRAINER_CLASS_BURGLAR, 22},
-    {TRAINER_CLASS_SWIMMER_M, 1},
-    {TRAINER_CLASS_ENGINEER, 12},
-    {TRAINER_CLASS_JUGGLER, 10},
-    {TRAINER_CLASS_SAILOR, 8},
-    {TRAINER_CLASS_COOLTRAINER, 9},
-    {TRAINER_CLASS_POKEMANIAC, 12},
-    {TRAINER_CLASS_TAMER, 10},
-    {TRAINER_CLASS_CAMPER, 5},
-    {TRAINER_CLASS_PSYCHIC, 5},
-    {TRAINER_CLASS_BIKER, 5},
-    {TRAINER_CLASS_GAMER, 18},
-    {TRAINER_CLASS_SCIENTIST, 12},
-    {TRAINER_CLASS_CRUSH_GIRL, 6},
-    {TRAINER_CLASS_TUBER, 1},
-    {TRAINER_CLASS_PKMN_BREEDER, 7},
-    {TRAINER_CLASS_PKMN_RANGER, 9},
-    {TRAINER_CLASS_AROMA_LADY, 7},
-    {TRAINER_CLASS_RUIN_MANIAC, 12},
-    {TRAINER_CLASS_LADY, 50},
-    {TRAINER_CLASS_PAINTER, 4},
-    {TRAINER_CLASS_TWINS, 3},
-    {TRAINER_CLASS_YOUNG_COUPLE, 7},
-    {TRAINER_CLASS_SIS_AND_BRO, 1},
-    {TRAINER_CLASS_COOL_COUPLE, 6},
-    {TRAINER_CLASS_CRUSH_KIN, 6},
-    {TRAINER_CLASS_SWIMMER_F, 1},
-    {TRAINER_CLASS_PLAYER, 1},
-    {TRAINER_CLASS_RS_LEADER, 25},
-    {TRAINER_CLASS_RS_ELITE_FOUR, 25},
-    {TRAINER_CLASS_RS_LASS, 4},
-    {TRAINER_CLASS_RS_YOUNGSTER, 4},
-    {TRAINER_CLASS_PKMN_TRAINER, 15},
-    {TRAINER_CLASS_RS_HIKER, 10},
-    {TRAINER_CLASS_RS_BEAUTY, 20},
-    {TRAINER_CLASS_RS_FISHERMAN, 10},
-    {TRAINER_CLASS_RS_LADY, 50},
-    {TRAINER_CLASS_TRIATHLETE, 10},
-    {TRAINER_CLASS_TEAM_AQUA, 5},
-    {TRAINER_CLASS_RS_TWINS, 3},
-    {TRAINER_CLASS_RS_SWIMMER_F, 2},
-    {TRAINER_CLASS_RS_BUG_CATCHER, 4},
-    {TRAINER_CLASS_SCHOOL_KID, 5},
-    {TRAINER_CLASS_RICH_BOY, 50},
-    {TRAINER_CLASS_SR_AND_JR, 4},
-    {TRAINER_CLASS_RS_BLACK_BELT, 8},
-    {TRAINER_CLASS_RS_TUBER_F, 1},
-    {TRAINER_CLASS_HEX_MANIAC, 6},
-    {TRAINER_CLASS_RS_PKMN_BREEDER, 10},
-    {TRAINER_CLASS_TEAM_MAGMA, 5},
-    {TRAINER_CLASS_INTERVIEWER, 12},
-    {TRAINER_CLASS_RS_TUBER_M, 1},
-    {TRAINER_CLASS_RS_YOUNG_COUPLE, 8},
-    {TRAINER_CLASS_GUITARIST, 8},
-    {TRAINER_CLASS_RS_GENTLEMAN, 20},
-    {TRAINER_CLASS_RS_CHAMPION, 50},
-    {TRAINER_CLASS_MAGMA_LEADER, 20},
-    {TRAINER_CLASS_BATTLE_GIRL, 6},
-    {TRAINER_CLASS_RS_SWIMMER_M, 2},
-    {TRAINER_CLASS_POKEFAN, 20},
-    {TRAINER_CLASS_EXPERT, 10},
-    {TRAINER_CLASS_DRAGON_TAMER, 12},
-    {TRAINER_CLASS_RS_BIRD_KEEPER, 8},
-    {TRAINER_CLASS_NINJA_BOY, 3},
-    {TRAINER_CLASS_PARASOL_LADY, 10},
-    {TRAINER_CLASS_BUG_MANIAC, 15},
-    {TRAINER_CLASS_RS_SAILOR, 8},
-    {TRAINER_CLASS_COLLECTOR, 15},
-    {TRAINER_CLASS_RS_PKMN_RANGER, 12},
-    {TRAINER_CLASS_MAGMA_ADMIN, 10},
-    {TRAINER_CLASS_RS_AROMA_LADY, 10},
-    {TRAINER_CLASS_RS_RUIN_MANIAC, 15},
-    {TRAINER_CLASS_RS_COOLTRAINER, 12},
-    {TRAINER_CLASS_RS_POKEMANIAC, 15},
-    {TRAINER_CLASS_KINDLER, 8},
-    {TRAINER_CLASS_RS_CAMPER, 4},
-    {TRAINER_CLASS_RS_PICNICKER, 4},
-    {TRAINER_CLASS_RS_PSYCHIC, 6},
-    {TRAINER_CLASS_RS_SIS_AND_BRO, 3},
-    {TRAINER_CLASS_OLD_COUPLE, 10},
-    {TRAINER_CLASS_AQUA_ADMIN, 10},
-    {TRAINER_CLASS_AQUA_LEADER, 20},
-    {TRAINER_CLASS_BOSS, 25},
+    {TRAINER_CLASS_LASS, 8},
+    {TRAINER_CLASS_BEAUTY, 36},
+    {TRAINER_CLASS_BLACK_BELT, 12},
+    {TRAINER_CLASS_CUE_BALL, 12},
+    {TRAINER_CLASS_CHANNELER, 16},
+    {TRAINER_CLASS_ROCKER, 12},
+    {TRAINER_CLASS_GENTLEMAN, 36},
+    {TRAINER_CLASS_BURGLAR, 44},
+    {TRAINER_CLASS_SWIMMER_M, 6},
+    {TRAINER_CLASS_ENGINEER, 24},
+    {TRAINER_CLASS_JUGGLER, 20},
+    {TRAINER_CLASS_SAILOR, 16},
+    {TRAINER_CLASS_COOLTRAINER, 18},
+    {TRAINER_CLASS_POKEMANIAC, 24},
+    {TRAINER_CLASS_TAMER, 20},
+    {TRAINER_CLASS_CAMPER, 10},
+    {TRAINER_CLASS_PSYCHIC, 10},
+    {TRAINER_CLASS_BIKER, 10},
+    {TRAINER_CLASS_GAMER, 36},
+    {TRAINER_CLASS_SCIENTIST, 24},
+    {TRAINER_CLASS_CRUSH_GIRL, 12},
+    {TRAINER_CLASS_TUBER, 6},
+    {TRAINER_CLASS_PKMN_BREEDER, 14},
+    {TRAINER_CLASS_PKMN_RANGER, 18},
+    {TRAINER_CLASS_AROMA_LADY, 14},
+    {TRAINER_CLASS_RUIN_MANIAC, 24},
+    {TRAINER_CLASS_LADY, 100},
+    {TRAINER_CLASS_PAINTER, 8},
+    {TRAINER_CLASS_TWINS, 6},
+    {TRAINER_CLASS_YOUNG_COUPLE, 14},
+    {TRAINER_CLASS_SIS_AND_BRO, 10},
+    {TRAINER_CLASS_COOL_COUPLE, 12},
+    {TRAINER_CLASS_CRUSH_KIN, 12},
+    {TRAINER_CLASS_SWIMMER_F, 6},
+    {TRAINER_CLASS_PLAYER, 6},
+    {TRAINER_CLASS_RS_LEADER, 50},
+    {TRAINER_CLASS_RS_ELITE_FOUR, 50},
+    {TRAINER_CLASS_RS_LASS, 8},
+    {TRAINER_CLASS_RS_YOUNGSTER, 8},
+    {TRAINER_CLASS_PKMN_TRAINER, 30},
+    {TRAINER_CLASS_RS_HIKER, 20},
+    {TRAINER_CLASS_RS_BEAUTY, 40},
+    {TRAINER_CLASS_RS_FISHERMAN, 20},
+    {TRAINER_CLASS_RS_LADY, 100},
+    {TRAINER_CLASS_TRIATHLETE, 20},
+    {TRAINER_CLASS_TEAM_AQUA, 10},
+    {TRAINER_CLASS_RS_TWINS, 6},
+    {TRAINER_CLASS_RS_SWIMMER_F, 4},
+    {TRAINER_CLASS_RS_BUG_CATCHER, 8},
+    {TRAINER_CLASS_SCHOOL_KID, 10},
+    {TRAINER_CLASS_RICH_BOY, 100},
+    {TRAINER_CLASS_SR_AND_JR, 8},
+    {TRAINER_CLASS_RS_BLACK_BELT, 16},
+    {TRAINER_CLASS_RS_TUBER_F, 6},
+    {TRAINER_CLASS_HEX_MANIAC, 10},
+    {TRAINER_CLASS_RS_PKMN_BREEDER, 20},
+    {TRAINER_CLASS_TEAM_MAGMA, 10},
+    {TRAINER_CLASS_INTERVIEWER, 24},
+    {TRAINER_CLASS_RS_TUBER_M, 6},
+    {TRAINER_CLASS_RS_YOUNG_COUPLE, 16},
+    {TRAINER_CLASS_GUITARIST, 16},
+    {TRAINER_CLASS_RS_GENTLEMAN, 40},
+    {TRAINER_CLASS_RS_CHAMPION, 100},
+    {TRAINER_CLASS_MAGMA_LEADER, 40},
+    {TRAINER_CLASS_BATTLE_GIRL, 12},
+    {TRAINER_CLASS_RS_SWIMMER_M, 4},
+    {TRAINER_CLASS_POKEFAN, 40},
+    {TRAINER_CLASS_EXPERT, 20},
+    {TRAINER_CLASS_DRAGON_TAMER, 24},
+    {TRAINER_CLASS_RS_BIRD_KEEPER, 16},
+    {TRAINER_CLASS_NINJA_BOY, 6},
+    {TRAINER_CLASS_PARASOL_LADY, 20},
+    {TRAINER_CLASS_BUG_MANIAC, 30},
+    {TRAINER_CLASS_RS_SAILOR, 16},
+    {TRAINER_CLASS_COLLECTOR, 30},
+    {TRAINER_CLASS_RS_PKMN_RANGER, 24},
+    {TRAINER_CLASS_MAGMA_ADMIN, 20},
+    {TRAINER_CLASS_RS_AROMA_LADY, 20},
+    {TRAINER_CLASS_RS_RUIN_MANIAC, 30},
+    {TRAINER_CLASS_RS_COOLTRAINER, 24},
+    {TRAINER_CLASS_RS_POKEMANIAC, 30},
+    {TRAINER_CLASS_KINDLER, 16},
+    {TRAINER_CLASS_RS_CAMPER, 8},
+    {TRAINER_CLASS_RS_PICNICKER, 8},
+    {TRAINER_CLASS_RS_PSYCHIC, 10},
+    {TRAINER_CLASS_RS_SIS_AND_BRO, 6},
+    {TRAINER_CLASS_OLD_COUPLE, 20},
+    {TRAINER_CLASS_AQUA_ADMIN, 20},
+    {TRAINER_CLASS_AQUA_LEADER, 40},
+    {TRAINER_CLASS_BOSS, 50},
     { 0xFF, 5},
 };
 
@@ -997,7 +1004,7 @@ static void CB2_HandleStartBattle(void)
             gTasks[taskId].data[5] = 0;
             gTasks[taskId].data[3] = gBattleStruct->multiBuffer.linkBattlerHeader.vsScreenHealthFlagsLo | (gBattleStruct->multiBuffer.linkBattlerHeader.vsScreenHealthFlagsHi << 8);
             gTasks[taskId].data[4] = gBlockRecvBuffer[enemyMultiplayerId][1];
-            SetDeoxysStats();
+            //SetDeoxysStats();
             gBattleCommunication[MULTIUSE_STATE]++;
         }
         break;
@@ -1238,7 +1245,7 @@ static void CB2_HandleStartMultiBattle(void)
             ResetBlockReceivedFlags();
             LinkBattleComputeBattleTypeFlags(4, playerMultiplayerId);
             SetAllPlayersBerryData();
-            SetDeoxysStats();
+            //SetDeoxysStats();
             memcpy(gDecompressionBuffer, gPlayerParty, sizeof(struct Pokemon) * 3);
             taskId = CreateTask(InitLinkBattleVsScreen, 0);
             gTasks[taskId].data[1] = 270;
@@ -1532,15 +1539,174 @@ static void SpriteCB_UnusedDebugSprite_Step(struct Sprite *sprite)
     }
 }
 
+u16 HasEvolution(u16 species, u8 scaledLevel, u8 normalLevel)
+{
+    u16 returnVal = species;
+    s8 seenFlag = GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), FLAG_GET_SEEN);
+
+    if (seenFlag) // If we've seen the base species, we have free reign to evolve it based on the scaledLevel
+    {
+        u16 i;
+        u8 evoCount = 0;
+
+        // First, count how many evos
+        for (i = 0; i < EVOS_PER_MON; i++)
+        {
+            if (gEvolutionTable[species][i].method != 0)
+                evoCount += 1;
+        }
+
+        if (evoCount > 0) // If evoCount is zero, don't do any of this calculation and just return species.
+        {
+            u16 validEvoArray[EVOS_PER_MON] = { 0,0,0,0,0 };
+            u8 validCount = 0;
+
+            // Second, collect all valid evolution species into an array.
+            for (i = 0; i < evoCount; i++)
+            {
+                if (gEvolutionTable[species][i].method == EVO_LEVEL ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_ATK_LT_DEF ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_ATK_GT_DEF ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_ATK_EQ_DEF ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_SILCOON ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_CASCOON ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_NINJASK ||
+                    gEvolutionTable[species][i].method == EVO_LEVEL_SHEDINJA)
+                {   // If evo level + 5 is less than or equal to the scaled level, add as possible evo
+                    if (gEvolutionTable[species][i].param + 5 <= scaledLevel)
+                    {
+                        validEvoArray[validCount] = gEvolutionTable[species][i].targetSpecies;
+                        validCount++;
+                    }
+                }
+                else
+                {   // If method is not level up, and the normalLevel+7 is less than the scaledLevel, add as possible evo
+                    if (normalLevel + 7 < scaledLevel)
+                    {
+                        validEvoArray[validCount] = gEvolutionTable[species][i].targetSpecies;
+                        validCount++;
+                    }
+                }
+            }
+            // Third, return a random valid evolution.
+            returnVal = validEvoArray[Random() % validCount]; // We could do more calculations here to determine what evolution we should return. Or we could just return a random valid one.
+            if (returnVal == 0) // If we have evolutions available but we don't have any valid evolutions (likely because of the +5), don't evolve.
+                return species;
+            else
+                return returnVal;
+        }
+    }
+    // If we haven't seen this species, or if this species has no evolutions, return the species.
+    return returnVal;
+}
+
+// If the player's average party level is lower than the opponents, don't do anything (+0).
+// If the player's average party level is higher than the opponents, scale the level using non-random scale steps, capping at +15 (or +difference if the game is beaten).
+// If the opponent is a leader, elite 4, champion, or rival ("bosses") and the average party level is higher than the opponents, increase by either difference + 3 or max mon level difference + 3.
+u8 ScaleLevel(u8 pokeBaseLevel, u16 trainerNum, u8 avgLevel, u8 currentMon, u8 totalMons, u8 maxMonLevel, u8 minMonLevel, u8 playerMonCount)
+{
+    s8 difference;
+    s8 scale;
+    s16 scaledLevel = 0; // resolve < 0 & > 100 edge cases before casting it back to u8.
+    currentMon += 1; // starts at zero, so increment to 1 for proper calcs
+
+    // If the party composition is stronger pokemon with weaker pokemon, adjust avgLevel to compensate
+    if (maxMonLevel - minMonLevel >= 25)
+        avgLevel += (((maxMonLevel - minMonLevel) * 100) / (playerMonCount * 100));
+
+    if (pokeBaseLevel >= avgLevel)
+    {
+        scale = 0;
+    }
+    else // <
+    {
+        if (gTrainers[trainerNum].trainerClass == TRAINER_CLASS_RIVAL_EARLY || // Rival
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_RIVAL_LATE || // Rival
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_BOSS || // Giovanni
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_MAGMA_ADMIN || // Magma
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_MAGMA_LEADER ||
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_AQUA_ADMIN || // Aqua
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_AQUA_LEADER ||
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_LEADER || // Gyms
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_ELITE_FOUR ||
+            gTrainers[trainerNum].trainerClass == TRAINER_CLASS_CHAMPION)
+        {
+            if (maxMonLevel - avgLevel > 10)
+                scale = (maxMonLevel - pokeBaseLevel) + 3;
+            else
+                scale = (avgLevel - pokeBaseLevel) + 3;
+        }
+        else
+        {
+            difference = avgLevel - pokeBaseLevel;
+            if (difference <= 4) { // 1-4
+                scale = 2;
+            }
+            else if (difference <= 8) { // 5-8
+                scale = 6;
+            }
+            else if (difference <= 12) { // 9-12
+                scale = 10;
+            }
+            else if (difference <= 16) { // 13-16
+                scale = 14;
+            }
+            else {
+                // If the game is beaten, continue scaling.
+                if (FlagGet(FLAG_SYS_GAME_CLEAR)) {
+                    scale = difference - (totalMons - currentMon);
+                }
+                else {
+                    // Otherwise, if the game is not beaten, cap scaling at 18.
+                    scale = 18;
+                }
+            }
+        }
+        scale += currentMon / 2; // make pokemon in the back of the party stronger than the first ones.
+        if (currentMon == totalMons) // if last pokemon, make it the strongest.
+            scale += 1;
+    }
+    scaledLevel = pokeBaseLevel + scale;
+    if (scaledLevel < 0) {
+        scaledLevel = 5;
+    }
+    else if (scaledLevel > 100) {
+        scaledLevel = 100;
+    }
+    return (u8)scaledLevel;
+}
+
 static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum)
 {
     u32 nameHash = 0;
     u32 personalityValue;
     u8 fixedIV;
     s32 i, j;
+    u16 avgLevel = 0;
+    u8 monCount = 0;
+    u8 minMon = 100;
+    u8 maxMon = 0;
+    u8 badEvs = 35;
+    u8 mediumEvs = 85;
+    u8 goodEvs = 175;
 
     if (trainerNum == TRAINER_SECRET_BASE)
         return 0;
+
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        if (GetMonData(&gPlayerParty[i], MON_DATA_SPECIES) != SPECIES_NONE)
+        {
+            u8 temp = GetMonData(&gPlayerParty[i], MON_DATA_LEVEL);
+            avgLevel += temp;
+            if (maxMon < temp)
+                maxMon = temp;
+            if (minMon > temp)
+                minMon = temp;
+            monCount++;
+        }
+    }
+    avgLevel = (avgLevel * 100) / (monCount * 100);
 
     if (gBattleTypeFlags & BATTLE_TYPE_TRAINER
      && !(gBattleTypeFlags & (BATTLE_TYPE_BATTLE_TOWER | BATTLE_TYPE_EREADER_TRAINER | BATTLE_TYPE_TRAINER_TOWER)))
@@ -1548,6 +1714,8 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum)
         ZeroEnemyPartyMons();
         for (i = 0; i < gTrainers[trainerNum].partySize; i++)
         {
+            u8 scaledLevel = 0;
+            u16 evolution = 0;
 
             if (gTrainers[trainerNum].doubleBattle == TRUE)
                 personalityValue = 0x80;
@@ -1561,69 +1729,110 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum)
 
             switch (gTrainers[trainerNum].partyFlags)
             {
-            case 0:
-            {
-                const struct TrainerMonNoItemDefaultMoves *partyData = gTrainers[trainerNum].party.NoItemDefaultMoves;
-
-                for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
-                    nameHash += gSpeciesNames[partyData[i].species][j];
-
-                personalityValue += nameHash << 8;
-                fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-                break;
-            }
-            case F_TRAINER_PARTY_CUSTOM_MOVESET:
-            {
-                const struct TrainerMonNoItemCustomMoves *partyData = gTrainers[trainerNum].party.NoItemCustomMoves;
-
-                for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
-                    nameHash += gSpeciesNames[partyData[i].species][j];
-
-                personalityValue += nameHash << 8;
-                fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-
-                for (j = 0; j < MAX_MON_MOVES; j++)
+                case 0:
                 {
-                    SetMonData(&party[i], MON_DATA_MOVE1 + j, &partyData[i].moves[j]);
-                    SetMonData(&party[i], MON_DATA_PP1 + j, &gBattleMoves[partyData[i].moves[j]].pp);
+                    const struct TrainerMonNoItemDefaultMoves *partyData = gTrainers[trainerNum].party.NoItemDefaultMoves;
+
+                    for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
+                        nameHash += gSpeciesNames[partyData[i].species][j];
+
+                    evolution = partyData[i].species;
+                    personalityValue += nameHash << 8;
+                    fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
+                    scaledLevel = ScaleLevel(partyData[i].lvl, trainerNum, avgLevel, (u8)i, gTrainers[trainerNum].partySize, maxMon, minMon, monCount);
+                    if (scaledLevel > partyData[i].lvl)
+                        evolution = HasEvolution(partyData[i].species, scaledLevel, partyData[i].lvl);
+
+                    CreateMon(&party[i], evolution, scaledLevel, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
+                    for (j = 0; j < NUM_STATS; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_HP_EV + j, &badEvs);
+                    }
+                    CalculateMonStats(&party[i]);
+                    break;
                 }
-                break;
-            }
-            case F_TRAINER_PARTY_HELD_ITEM:
-            {
-                const struct TrainerMonItemDefaultMoves *partyData = gTrainers[trainerNum].party.ItemDefaultMoves;
-
-                for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
-                    nameHash += gSpeciesNames[partyData[i].species][j];
-
-                personalityValue += nameHash << 8;
-                fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-
-                SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[i].heldItem);
-                break;
-            }
-            case F_TRAINER_PARTY_CUSTOM_MOVESET | F_TRAINER_PARTY_HELD_ITEM:
-            {
-                const struct TrainerMonItemCustomMoves *partyData = gTrainers[trainerNum].party.ItemCustomMoves;
-
-                for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
-                    nameHash += gSpeciesNames[partyData[i].species][j];
-
-                personalityValue += nameHash << 8;
-                fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-                SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[i].heldItem);
-
-                for (j = 0; j < MAX_MON_MOVES; j++)
+                case F_TRAINER_PARTY_CUSTOM_MOVESET:
                 {
-                    SetMonData(&party[i], MON_DATA_MOVE1 + j, &partyData[i].moves[j]);
-                    SetMonData(&party[i], MON_DATA_PP1 + j, &gBattleMoves[partyData[i].moves[j]].pp);
+                    const struct TrainerMonNoItemCustomMoves *partyData = gTrainers[trainerNum].party.NoItemCustomMoves;
+
+                    for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
+                        nameHash += gSpeciesNames[partyData[i].species][j];
+
+                    evolution = partyData[i].species;
+                    personalityValue += nameHash << 8;
+                    fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
+                    scaledLevel = ScaleLevel(partyData[i].lvl, trainerNum, avgLevel, (u8)i, gTrainers[trainerNum].partySize, maxMon, minMon, monCount);
+                    if (scaledLevel > partyData[i].lvl)
+                        evolution = HasEvolution(partyData[i].species, scaledLevel, partyData[i].lvl);
+
+                    CreateMon(&party[i], evolution, scaledLevel, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
+
+                    for (j = 0; j < MAX_MON_MOVES; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_MOVE1 + j, &partyData[i].moves[j]);
+                        SetMonData(&party[i], MON_DATA_PP1 + j, &gBattleMoves[partyData[i].moves[j]].pp);
+                    }
+                    for (j = 0; j < NUM_STATS; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_HP_EV + j, &mediumEvs);
+                    }
+                    CalculateMonStats(&party[i]);
+                    break;
                 }
-                break;
-            }
+                case F_TRAINER_PARTY_HELD_ITEM:
+                {
+                    const struct TrainerMonItemDefaultMoves *partyData = gTrainers[trainerNum].party.ItemDefaultMoves;
+
+                    for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
+                        nameHash += gSpeciesNames[partyData[i].species][j];
+
+                    evolution = partyData[i].species;
+                    personalityValue += nameHash << 8;
+                    fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
+                    scaledLevel = ScaleLevel(partyData[i].lvl, trainerNum, avgLevel, (u8)i, gTrainers[trainerNum].partySize, maxMon, minMon, monCount);
+                    if (scaledLevel > partyData[i].lvl)
+                        evolution = HasEvolution(partyData[i].species, scaledLevel, partyData[i].lvl);
+
+                    CreateMon(&party[i], evolution, scaledLevel, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
+                    SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[i].heldItem);
+
+                    for (j = 0; j < NUM_STATS; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_HP_EV + j, &mediumEvs);
+                    }
+                    CalculateMonStats(&party[i]);
+                    break;
+                }
+                case F_TRAINER_PARTY_CUSTOM_MOVESET | F_TRAINER_PARTY_HELD_ITEM:
+                {
+                    const struct TrainerMonItemCustomMoves *partyData = gTrainers[trainerNum].party.ItemCustomMoves;
+
+                    for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
+                        nameHash += gSpeciesNames[partyData[i].species][j];
+
+                    evolution = partyData[i].species;
+                    personalityValue += nameHash << 8;
+                    fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
+                    scaledLevel = ScaleLevel(partyData[i].lvl, trainerNum, avgLevel, (u8)i, gTrainers[trainerNum].partySize, maxMon, minMon, monCount);
+                    if (scaledLevel > partyData[i].lvl)
+                        evolution = HasEvolution(partyData[i].species, scaledLevel, partyData[i].lvl);
+
+                    CreateMon(&party[i], evolution, scaledLevel, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
+                    SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[i].heldItem);
+
+                    for (j = 0; j < MAX_MON_MOVES; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_MOVE1 + j, &partyData[i].moves[j]);
+                        SetMonData(&party[i], MON_DATA_PP1 + j, &gBattleMoves[partyData[i].moves[j]].pp);
+                    }
+                    for (j = 0; j < NUM_STATS; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_HP_EV + j, &goodEvs);
+                    }
+                    CalculateMonStats(&party[i]);
+
+                    break;
+                }
             }
         }
 
@@ -2282,7 +2491,10 @@ static void BattleStartClearSetData(void)
     if (gBattleStruct->safariEscapeFactor <= 1)
         gBattleStruct->safariEscapeFactor = 2;
     gBattleStruct->wildVictorySong = 0;
-    gBattleStruct->moneyMultiplier = 1;
+    if (partyMonHoldDoublePrizeEffect())
+        gBattleStruct->moneyMultiplier = 2;
+    else
+        gBattleStruct->moneyMultiplier = 1;
 
     for (i = 0; i < 8; i++)
     {
@@ -2597,12 +2809,12 @@ static void BattleIntroDrawTrainersOrMonsSprites(void)
                 MarkBattlerForControllerExec(gActiveBattler);
             }
             if (GetBattlerSide(gActiveBattler) == B_SIDE_OPPONENT
-                && !(gBattleTypeFlags & (BATTLE_TYPE_EREADER_TRAINER
-                                    | BATTLE_TYPE_POKEDUDE
-                                    | BATTLE_TYPE_LINK
+                && !(gBattleTypeFlags & (//BATTLE_TYPE_EREADER_TRAINER
+                                    /*|*/ BATTLE_TYPE_POKEDUDE
+                                    //| BATTLE_TYPE_LINK
                                     | BATTLE_TYPE_GHOST
                                     | BATTLE_TYPE_OLD_MAN_TUTORIAL
-                                    | BATTLE_TYPE_LEGENDARY)))
+                                    /*| BATTLE_TYPE_LEGENDARY*/)))
             {
                 HandleSetPokedexFlag(SpeciesToNationalPokedexNum(gBattleMons[gActiveBattler].species), FLAG_SET_SEEN, gBattleMons[gActiveBattler].personality);
             }
@@ -2616,12 +2828,12 @@ static void BattleIntroDrawTrainersOrMonsSprites(void)
                     if (!IS_BATTLE_TYPE_GHOST_WITHOUT_SCOPE(gBattleTypeFlags))
                         HandleSetPokedexFlag(SpeciesToNationalPokedexNum(gBattleMons[gActiveBattler].species), FLAG_SET_SEEN, gBattleMons[gActiveBattler].personality);
                 }
-                else if (!(gBattleTypeFlags & (BATTLE_TYPE_EREADER_TRAINER
-                                            | BATTLE_TYPE_POKEDUDE
-                                            | BATTLE_TYPE_LINK
+                else if (!(gBattleTypeFlags & (/*BATTLE_TYPE_EREADER_TRAINER*/
+                                            /*|*/ BATTLE_TYPE_POKEDUDE
+                                            //| BATTLE_TYPE_LINK
                                             | BATTLE_TYPE_GHOST
                                             | BATTLE_TYPE_OLD_MAN_TUTORIAL
-                                            | BATTLE_TYPE_LEGENDARY)))
+                                            /*| BATTLE_TYPE_LEGENDARY*/)))
                 {
                     HandleSetPokedexFlag(SpeciesToNationalPokedexNum(gBattleMons[gActiveBattler].species), FLAG_SET_SEEN, gBattleMons[gActiveBattler].personality);
                 }
@@ -2772,12 +2984,12 @@ static void BattleIntroRecordMonsToDex(void)
     {
         for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
             if (GetBattlerSide(gActiveBattler) == B_SIDE_OPPONENT
-             && !(gBattleTypeFlags & (BATTLE_TYPE_EREADER_TRAINER
-                                   | BATTLE_TYPE_POKEDUDE
-                                   | BATTLE_TYPE_LINK
+             && !(gBattleTypeFlags & (/*BATTLE_TYPE_EREADER_TRAINER*/
+                                   /*|*/ BATTLE_TYPE_POKEDUDE
+                                   //| BATTLE_TYPE_LINK
                                    | BATTLE_TYPE_GHOST
                                    | BATTLE_TYPE_OLD_MAN_TUTORIAL
-                                   | BATTLE_TYPE_LEGENDARY)))
+                                   /*| BATTLE_TYPE_LEGENDARY*/)))
                 HandleSetPokedexFlag(SpeciesToNationalPokedexNum(gBattleMons[gActiveBattler].species), FLAG_SET_SEEN, gBattleMons[gActiveBattler].personality);
         gBattleMainFunc = BattleIntroPrintPlayerSendsOut;
     }
@@ -3924,12 +4136,68 @@ static void ReturnFromBattleToOverworld(void)
         {
             UpdateRoamerHPStatus(&gEnemyParty[0]);
 #ifdef BUGFIX
-            if ((gBattleOutcome == B_OUTCOME_WON) || gBattleOutcome == B_OUTCOME_CAUGHT)
+            if (gBattleOutcome == B_OUTCOME_CAUGHT) {
 #else
-            if ((gBattleOutcome & B_OUTCOME_WON) || gBattleOutcome == B_OUTCOME_CAUGHT) // Bug: When Roar is used by roamer, gBattleOutcome is B_OUTCOME_PLAYER_TELEPORTED (5).
+            if ((gBattleOutcome & B_OUTCOME_WON) || gBattleOutcome == B_OUTCOME_CAUGHT) {// Bug: When Roar is used by roamer, gBattleOutcome is B_OUTCOME_PLAYER_TELEPORTED (5).
 #endif                                                                                  // & with B_OUTCOME_WON (1) will return TRUE and deactivates the roamer.
                 SetRoamerInactive();
+                // Set flag based on last set flag.
+                // There are easier ways to do it, but I believe this one
+                // helps remain compatible with the universal randomizer.
+                // By remaining pokemon-agnostic here, the universal randomizer just has to change the entries @ GetRoamerSpecies
+                switch (GetStarterSpecies())
+                {
+                case SPECIES_BULBASAUR:
+                    if (!FlagGet(FLAG_CAUGHT_ENTEI))
+                    {
+                        FlagSet(FLAG_CAUGHT_ENTEI);
+                    }
+                    else if (!FlagGet(FLAG_CAUGHT_SUICUNE))
+                    {
+                        FlagSet(FLAG_CAUGHT_SUICUNE);
+                    }
+                    else if (!FlagGet(FLAG_CAUGHT_RAIKOU))
+                    {
+                        FlagSet(FLAG_CAUGHT_RAIKOU);
+                    }
+                    break;
+                case SPECIES_CHARMANDER:
+                    if (!FlagGet(FLAG_CAUGHT_SUICUNE))
+                    {
+                        FlagSet(FLAG_CAUGHT_SUICUNE);
+                    }
+                    else if (!FlagGet(FLAG_CAUGHT_RAIKOU))
+                    {
+                        FlagSet(FLAG_CAUGHT_RAIKOU);
+                    }
+                    else if (!FlagGet(FLAG_CAUGHT_ENTEI))
+                    {
+                        FlagSet(FLAG_CAUGHT_ENTEI);
+                    }
+                    break;
+                case SPECIES_SQUIRTLE:
+                    if (!FlagGet(FLAG_CAUGHT_RAIKOU))
+                    {
+                        FlagSet(FLAG_CAUGHT_RAIKOU);
+                    }
+                    else if (!FlagGet(FLAG_CAUGHT_ENTEI))
+                    {
+                        FlagSet(FLAG_CAUGHT_ENTEI);
+                    }
+                    else if (!FlagGet(FLAG_CAUGHT_SUICUNE))
+                    {
+                        FlagSet(FLAG_CAUGHT_SUICUNE);
+                    }
+                    break;
+                }
+                InitRoamer();
+            }
+            else if (gBattleOutcome == B_OUTCOME_WON) {
+                SetRoamerInactive();
+                InitRoamer();
+            }
         }
+        gSpecialVar_Result = gBattleOutcome;
         m4aSongNumStop(SE_LOW_HEALTH);
         SetMainCallback2(gMain.savedCallback);
     }
@@ -4386,7 +4654,7 @@ static void HandleAction_ThrowBait(void)
     gBattleStruct->safariRockThrowCounter = 0;
     gBattleStruct->safariCatchFactor >>= 1;
     if (gBattleStruct->safariCatchFactor <= 2)
-        gBattleStruct->safariCatchFactor = 3;
+        gBattleStruct->safariCatchFactor = 5;
     gBattlescriptCurrInstr = gBattlescriptsForSafariActions[2];
     gCurrentActionFuncId = B_ACTION_EXEC_SCRIPT;
 }
@@ -4470,4 +4738,18 @@ static void HandleAction_ActionFinished(void)
     gBattleCommunication[ACTIONS_CONFIRMED_COUNT] = 0;
     gBattleScripting.multihitMoveEffect = 0;
     gBattleResources->battleScriptsStack->size = 0;
+}
+
+static bool8 partyMonHoldDoublePrizeEffect(void)
+{
+    int i;
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        u8 item = GetMonData(&gPlayerParty[i], MON_DATA_HELD_ITEM);
+        if (ItemId_GetHoldEffect(item) == HOLD_EFFECT_DOUBLE_PRIZE)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }

@@ -120,3 +120,19 @@ Text_Burglary::
 Text_PlayerFacingTVScreen::
 	.string "There's a POKéMON on TV!\n"
 	.string "It looks like it's having fun.$"
+
+Text_PlayerFacingTVScreen_Outbreak::
+	.string "Greetings!\n"
+	.string "It's time for POKéMON NEWS.\p"
+	.string "We've just received word of a very\n"
+	.string "rare occurrence.\p"
+	.string "There have been reports of a mass\n"
+	.string "outbreak of {STR_VAR_2} in the vicinity\l"
+	.string "of {STR_VAR_1}.\p"
+	.string "{STR_VAR_2}, as you're probably aware,\n"
+	.string "is known as a POKéMON that's rare\l"
+	.string "and hard to find.\p"
+	.string "It sounds like a rare opportunity to\n"
+	.string "see the mystifying outbreak of\l"
+	.string "{STR_VAR_2} in the wild.\p"
+	.string "That's the news on POKéMON NEWS.$"

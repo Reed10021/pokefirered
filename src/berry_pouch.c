@@ -1332,7 +1332,7 @@ static void Task_Sell_PrintSelectMultipleUI(u8 taskId)
 
 static void SellMultiple_UpdateSellPriceDisplay(s32 price)
 {
-    PrintMoneyAmount(GetVariableWindowId(1), 56, 10, price, 0);
+    PrintMoneyAmount(GetVariableWindowId(1), 48, 10, price, 0);
 }
 
 static void Task_Sell_SelectMultiple(u8 taskId)

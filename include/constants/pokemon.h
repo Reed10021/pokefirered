@@ -207,6 +207,7 @@
 #define LEVEL_UP_END       0xFFFF
 
 #define MAX_LEVEL_UP_MOVES       20
+#define MAX_LEVEL_DIFF_PRE_EV    5
 
 #define MON_MALE       0x00
 #define MON_FEMALE     0xFE
@@ -230,9 +231,9 @@
 #define MAX_PER_STAT_IVS 31
 #define MAX_IV_MASK 31
 #define USE_RANDOM_IVS (MAX_PER_STAT_IVS + 1)
-#define MAX_PER_STAT_EVS 255
+#define MAX_PER_STAT_EVS 252
 #define MAX_TOTAL_EVS 510
-#define EV_ITEM_RAISE_LIMIT 100
+#define EV_ITEM_RAISE_LIMIT 252
 
 // Battle move flags
 #define FLAG_MAKES_CONTACT          (1 << 0)
@@ -281,10 +282,11 @@
 
 #define EVOS_PER_MON 5
 
-#define EVO_MODE_NORMAL     0
-#define EVO_MODE_TRADE      1
-#define EVO_MODE_ITEM_USE   2
-#define EVO_MODE_ITEM_CHECK 3 // If an Everstone is being held, still want to show that the stone *could* be used on that Pokémon to evolve
+#define EVO_MODE_NORMAL      0
+#define EVO_MODE_TRADE       1
+#define EVO_MODE_ITEM_USE    2
+#define EVO_MODE_ITEM_CHECK  3 // If an Everstone is being held, still want to show that the stone *could* be used on that Pokémon to evolve
+#define EVO_MODE_TRADE_CHECK 4 // Check if a pokemon could evolve by trade, but without removing the held-item
 
 #define MON_PIC_WIDTH 64
 #define MON_PIC_HEIGHT 64

@@ -31,6 +31,8 @@
 #include "mystery_gift.h"
 #include "naming_screen.h"
 #include "party_menu.h"
+#include "rtc.h"
+#include "wallclock.h"
 #include "dynamic_placeholder_text_util.h"
 #include "new_menu_helpers.h"
 #include "constants/songs.h"
@@ -41,6 +43,7 @@
 #include "constants/menu.h"
 #include "constants/event_objects.h"
 #include "constants/metatile_labels.h"
+#include "constants/metatile_behaviors.h"
 
 static EWRAM_DATA u8 sElevatorCurrentFloorWindowId = 0;
 static EWRAM_DATA u16 sElevatorScroll = 0;
@@ -91,6 +94,13 @@ void ShowDiploma(void)
 {
     QuestLog_CutRecording();
     SetMainCallback2(CB2_ShowDiploma);
+    LockPlayerFieldControls();
+}
+
+void Special_ViewWallClock(void)
+{
+    gMain.savedCallback = CB2_ReturnToField;
+    SetMainCallback2(CB2_ViewWallClock);
     LockPlayerFieldControls();
 }
 
@@ -160,6 +170,16 @@ void SetHiddenItemFlag(void)
     FlagSet(gSpecialVar_0x8004);
 }
 
+u16 GetWeekCount(void)
+{
+    u16 weekCount = gLocalTime.days / 7;
+    if (weekCount > 9999)
+    {
+        weekCount = 9999;
+    }
+    return weekCount;
+}
+
 u8 GetLeadMonFriendship(void)
 {
     struct Pokemon * pokemon = &gPlayerParty[GetLeadMonIndex()];
@@ -212,6 +232,9 @@ bool8 PlayerHasGrassPokemonInParty(void)
 void AnimatePcTurnOn(void)
 {
     u8 taskId;
+
+    if(gSysPcFromStartMenu)
+        return;
 
     if (FuncIsActiveTask(Task_AnimatePcTurnOn) != TRUE)
     {
@@ -289,6 +312,11 @@ void AnimatePcTurnOff()
     s8 deltaX = 0;
     s8 deltaY = 0;
     u8 direction = GetPlayerFacingDirection();
+
+    if(gSysPcFromStartMenu) {
+        gSysPcFromStartMenu = FALSE;
+        return;
+    }
 
     switch (direction)
     {
@@ -2455,6 +2483,40 @@ void SetDeoxysTrianglePalette(void)
     ApplyGlobalFieldPaletteTint(10);
 }
 
+void BufferLottoTicketNumber(void)
+{
+    if (gSpecialVar_Result >= 10000)
+    {
+        TV_PrintIntToStringVar(0, gSpecialVar_Result);
+    }
+    else if (gSpecialVar_Result >= 1000)
+    {
+        gStringVar1[0] = CHAR_0;
+        ConvertIntToDecimalStringN(gStringVar1 + 1, gSpecialVar_Result, STR_CONV_MODE_LEFT_ALIGN, CountDigits(gSpecialVar_Result));
+    }
+    else if (gSpecialVar_Result >= 100)
+    {
+        gStringVar1[0] = CHAR_0;
+        gStringVar1[1] = CHAR_0;
+        ConvertIntToDecimalStringN(gStringVar1 + 2, gSpecialVar_Result, STR_CONV_MODE_LEFT_ALIGN, CountDigits(gSpecialVar_Result));
+    }
+    else if (gSpecialVar_Result >= 10)
+    {
+        gStringVar1[0] = CHAR_0;
+        gStringVar1[1] = CHAR_0;
+        gStringVar1[2] = CHAR_0;
+        ConvertIntToDecimalStringN(gStringVar1 + 3, gSpecialVar_Result, STR_CONV_MODE_LEFT_ALIGN, CountDigits(gSpecialVar_Result));
+    }
+    else
+    {
+        gStringVar1[0] = CHAR_0;
+        gStringVar1[1] = CHAR_0;
+        gStringVar1[2] = CHAR_0;
+        gStringVar1[3] = CHAR_0;
+        ConvertIntToDecimalStringN(gStringVar1 + 4, gSpecialVar_Result, STR_CONV_MODE_LEFT_ALIGN, CountDigits(gSpecialVar_Result));
+    }
+}
+
 bool8 IsBadEggInParty(void)
 {
     u8 partyCount = CalculatePlayerPartyCount();
@@ -2552,4 +2614,93 @@ static void Task_WingFlapSound(u8 taskId)
     }
     if (data[0] == gSpecialVar_0x8004 - 1)
         DestroyTask(taskId);
+}
+
+void IsDeoxysInParty(void)
+{
+    u8 i;
+    u16 species;
+    struct Pokemon* pokemon;
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        pokemon = &gPlayerParty[i];
+        if (GetMonData(pokemon, MON_DATA_SANITY_HAS_SPECIES) && !GetMonData(pokemon, MON_DATA_IS_EGG))
+        {
+            species = GetMonData(pokemon, MON_DATA_SPECIES);
+            if (species == SPECIES_DEOXYS || species == SPECIES_DEOXYS_ATTACK || species == SPECIES_DEOXYS_DEFENSE || species == SPECIES_DEOXYS_SPEED)
+            {
+                gSpecialVar_Result = TRUE;
+                return;
+            }
+        }
+    }
+    gSpecialVar_Result = FALSE;
+}
+
+// Changes a Deoxys' form if the following conditions are met:
+// -gSpecialVar_0x8004 is currently hosting a Deoxys form.
+// -The metatile behavior of the tile in front of the Player is MB_UNUSED_2C, MB_UNUSED_2D, MB_UNUSED_2E or MB_UNUSED_2F.
+// If these conditions aren't met, gSpecialVar_Result is set to FALSE meaning Deoxys' form didn't change.
+bool16 TryChangeDeoxysForm(void)
+{
+    u16 baseSpecies = GetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPECIES);
+    u16 targetSpecies;
+    u8 metatileBehavior;
+
+    if (baseSpecies == SPECIES_DEOXYS
+        || baseSpecies == SPECIES_DEOXYS_ATTACK
+        || baseSpecies == SPECIES_DEOXYS_DEFENSE
+        || baseSpecies == SPECIES_DEOXYS_SPEED)
+    {
+        struct MapPosition position;
+        extern struct MapPosition gPlayerFacingPosition;
+        GetXYCoordsOneStepInFrontOfPlayer(&gPlayerFacingPosition.x, &gPlayerFacingPosition.y);
+        metatileBehavior = MapGridGetMetatileBehaviorAt(gPlayerFacingPosition.x, gPlayerFacingPosition.y);
+
+        switch (metatileBehavior)
+        {
+        case MB_UNUSED_2C:
+            targetSpecies = SPECIES_DEOXYS;
+            break;
+        case MB_UNUSED_2D:
+            targetSpecies = SPECIES_DEOXYS_ATTACK;
+            break;
+        case MB_UNUSED_2E:
+            targetSpecies = SPECIES_DEOXYS_DEFENSE;
+            break;
+        case MB_UNUSED_2F:
+            targetSpecies = SPECIES_DEOXYS_SPEED;
+            break;
+        default:
+            gSpecialVar_Result = FALSE;
+            return;
+        }
+
+        // No change, so don't change.
+        if (baseSpecies == targetSpecies)
+        {
+            gSpecialVar_Result = FALSE;
+            return;
+        }
+
+
+        SetMonData(&gPlayerParty[gSpecialVar_0x8004], MON_DATA_SPECIES, &targetSpecies);
+        CalculateMonStats(&gPlayerParty[gSpecialVar_0x8004]);
+        gSpecialVar_Result = TRUE;
+        return;
+    }
+
+    gSpecialVar_Result = FALSE;
+}
+
+void GetOutbreakMon(void)
+{
+    if (VarGet(VAR_OUTBREAK_SPECIES) != SPECIES_NONE) {
+        GetMapName(gStringVar1, VarGet(VAR_OUTBREAK_LOCATION_MAP), 0);
+        StringCopy(gStringVar2, gSpeciesNames[VarGet(VAR_OUTBREAK_SPECIES)]);
+        gSpecialVar_Result = TRUE;
+    }
+    else {
+        gSpecialVar_Result = FALSE;
+    }
 }

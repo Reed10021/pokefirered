@@ -5,12 +5,19 @@
 
 extern const u8 *const gMoveDescriptionPointers[];
 extern const u8 *const gNatureNamePointers[];
+//extern const struct SpriteTemplate sSpriteTemplate_MoveTypes;
+//extern const struct CompressedSpriteSheet sSpriteSheet_MoveTypes;
+//extern const struct SpriteTemplate sSpriteTemplate_SplitIcons;
+//extern const struct CompressedSpriteSheet sSpriteSheet_SplitIcons;
+//extern const struct SpritePalette sSpritePal_SplitIcons;
 
 void ShowSelectMovePokemonSummaryScreen(struct Pokemon *, u8, u8, MainCallback, u16);
 u8 GetMoveSlotToReplace(void);
 void SummaryScreen_SetUnknownTaskId(u8 a0);
 void SummaryScreen_DestroyUnknownTask(void);
+u8 GetBattleMoveSplit(u16 move);
 u8 GetLastViewedMonIndex(void);
+void SetLastViewedMonIndex(s8 slotIndex);
 void ShowPokemonSummaryScreen(struct Pokemon * party, u8 cursorPos, u8 lastIdx, void (*callback)(void), u8 a4);
 void SetPokemonSummaryScreenMode(u8);
 

@@ -11,12 +11,12 @@ MAKER_CODE  := 01
 
 # Version
 ifeq ($(GAME_VERSION),FIRERED)
-TITLE       := POKEMON FIRE
+TITLE       := POKEMON FIRR
 GAME_CODE   := BPR
 BUILD_NAME  := firered
 else
 ifeq ($(GAME_VERSION),LEAFGREEN)
-TITLE       := POKEMON LEAF
+TITLE       := POKEMON LERR
 GAME_CODE   := BPG
 BUILD_NAME  := leafgreen
 else

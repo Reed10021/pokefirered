@@ -387,12 +387,12 @@ static const u8 sReelIconAnimByReelAndPos[NUM_REELS][REEL_LENGTH] = {
 
 static const u16 sPayoutTable[] = {
     [PAYOUT_NONE]      =   0,
-    [PAYOUT_CHERRIES2] =   2,
-    [PAYOUT_CHERRIES3] =   6,
-    [PAYOUT_MAGSHELL]  =   8,
-    [PAYOUT_PIKAPSY]   =  15,
-    [PAYOUT_ROCKET]    = 100,
-    [PAYOUT_7]         = 300
+    [PAYOUT_CHERRIES2] =   12,
+    [PAYOUT_CHERRIES3] =   25,
+    [PAYOUT_MAGSHELL]  =   50,
+    [PAYOUT_PIKAPSY]   =  100,
+    [PAYOUT_ROCKET]    =  500,
+    [PAYOUT_7]         =  500
 };
 
 #if defined(FIRERED)
@@ -1187,16 +1187,16 @@ static void MainTask_WinHandlePayout(u8 taskId)
         data[1]++;
         if (data[1] > 120)
         {
-            data[1] = 8;
+            data[1] = 4;
             if (JOY_HELD(A_BUTTON))
-                data[1] = 2;
+                data[1] =1;
             data[0]++;
         }
         break;
     case 2:
         if (!IsSlotMachineSetupTaskActive(0))
         {
-            if (IsFanfareTaskInactive() && JOY_NEW(START_BUTTON))
+            if (IsFanfareTaskInactive() && JOY_NEW(START_BUTTON | B_BUTTON | DPAD_ANY))
             {
                 AddCoins(sSlotMachineState->payout);
                 sSlotMachineState->payout = 0;
@@ -1213,9 +1213,9 @@ static void MainTask_WinHandlePayout(u8 taskId)
                         AddCoins(1);
                         sSlotMachineState->payout--;
                     }
-                    data[1] = 8;
+                    data[1] = 4;
                     if (JOY_HELD(A_BUTTON))
-                        data[1] = 2;
+                        data[1] = 1;
                 }
             }
             SetSlotMachineSetupTask(SLOTTASK_SHOW_AMOUNTS, 0);

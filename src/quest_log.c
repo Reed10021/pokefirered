@@ -450,23 +450,31 @@ void TryStartQuestLogPlayback(u8 taskId)
     u8 i;
 
     QL_EnableRecordingSteps();
-    sNumScenes = 0;
-    for (i = 0; i < QUEST_LOG_SCENE_COUNT; i++)
+    if (FlagGet(FLAG_FLASHBACKS_DISABLED) == 1)
     {
-        if (gSaveBlock1Ptr->questLog[i].startType != 0)
-            sNumScenes++;
-    }
-
-    if (sNumScenes != 0)
-    {
-        gHelpSystemEnabled = FALSE;
-        Task_BeginQuestLogPlayback(taskId);
+        SetMainCallback2(CB2_ContinueSavedGame);
         DestroyTask(taskId);
     }
     else
     {
-        SetMainCallback2(CB2_ContinueSavedGame);
-        DestroyTask(taskId);
+        sNumScenes = 0;
+        for (i = 0; i < QUEST_LOG_SCENE_COUNT; i++)
+        {
+            if (gSaveBlock1Ptr->questLog[i].startType != 0)
+                sNumScenes++;
+        }
+
+        if (sNumScenes != 0)
+        {
+            gHelpSystemEnabled = FALSE;
+            Task_BeginQuestLogPlayback(taskId);
+            DestroyTask(taskId);
+        }
+        else
+        {
+            SetMainCallback2(CB2_ContinueSavedGame);
+            DestroyTask(taskId);
+        }
     }
 }
 

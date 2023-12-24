@@ -38,6 +38,9 @@
 #define SIGNPOST_SCRIPTED 240
 #define SIGNPOST_NA 255
 
+static EWRAM_DATA u8 sCurrentDirection = 0;
+static EWRAM_DATA u8 sPreviousDirection = 0;
+
 static void QuestLogOverrideJoyVars(struct FieldInput *input, u16 *newKeys, u16 *heldKeys);
 static void Task_QuestLogPlayback_OpenStartMenu(u8 taskId);
 static void GetPlayerPosition(struct MapPosition * position);
@@ -56,6 +59,8 @@ static bool8 TryStartMiscWalkingScripts(u16 metatileBehavior);
 static bool8 TryStartStepCountScript(u16 metatileBehavior);
 static void UpdateHappinessStepCounter(void);
 static bool8 UpdatePoisonStepCounter(void);
+static void SetDirectionFromHeldKeys(u16 heldKeys);
+static u8 GetDirectionFromBitfield(u8 bitfield);
 static bool8 CheckStandardWildEncounter(u32 metatileAttributes);
 static bool8 TrySetUpWalkIntoSignpostScript(struct MapPosition * position, u16 metatileBehavior, u8 playerDirection);
 static void SetUpWalkIntoSignScript(const u8 *script, u8 playerDirection);
@@ -83,8 +88,8 @@ void FieldClearPlayerInput(struct FieldInput *input)
     input->heldDirection2 = FALSE;
     input->tookStep = FALSE;
     input->pressedBButton = FALSE;
+    input->pressedLButton = FALSE;
     input->pressedRButton = FALSE;
-    input->input_field_1_0 = FALSE;
     input->input_field_1_1 = FALSE;
     input->input_field_1_2 = FALSE;
     input->input_field_1_3 = FALSE;
@@ -117,6 +122,8 @@ void FieldGetPlayerInput(struct FieldInput *input, u16 newKeys, u16 heldKeys)
                         input->pressedAButton = TRUE;
                     if (newKeys & B_BUTTON)
                         input->pressedBButton = TRUE;
+                    if (newKeys & L_BUTTON && gSaveBlock2Ptr->optionsButtonMode != OPTIONS_BUTTON_MODE_L_EQUALS_A) // Make sure we don't trigger the L-bound item AND A at the same time in L=A mode.
+                        input->pressedLButton = TRUE;
                     if (newKeys & R_BUTTON)
                         input->pressedRButton = TRUE;
                 }
@@ -144,14 +151,15 @@ void FieldGetPlayerInput(struct FieldInput *input, u16 newKeys, u16 heldKeys)
 
     if (!QL_IS_PLAYBACK_STATE)
     {
-        if (heldKeys & DPAD_UP)
-            input->dpadDirection = DIR_NORTH;
-        else if (heldKeys & DPAD_DOWN)
-            input->dpadDirection = DIR_SOUTH;
-        else if (heldKeys & DPAD_LEFT)
-            input->dpadDirection = DIR_WEST;
-        else if (heldKeys & DPAD_RIGHT)
-            input->dpadDirection = DIR_EAST;
+        SetDirectionFromHeldKeys(heldKeys);
+        input->dpadDirection = sCurrentDirection;
+
+        // If B is pressed, field controls are allowed, and the player is either running or walking.
+        if ((newKeys & B_BUTTON) && (!ArePlayerFieldControlsLocked())
+            && (gPlayerAvatar.flags & (PLAYER_AVATAR_FLAG_DASH | PLAYER_AVATAR_FLAG_ON_FOOT)))
+        {
+            gRunToggleBtnSet = TRUE;
+        }
     }
 }
 
@@ -289,9 +297,19 @@ int ProcessPlayerFieldInput(struct FieldInput *input)
         ShowStartMenu();
         return TRUE;
     }
-    if (input->pressedSelectButton && UseRegisteredKeyItemOnField() == TRUE)
+    if (input->pressedSelectButton && UseRegisteredKeyItemOnField(0))
     {
         gFieldInputRecord.pressedSelectButton = TRUE;
+        return TRUE;
+    }
+    else if (input->pressedLButton && UseRegisteredKeyItemOnField(1))
+    {
+        gFieldInputRecord.pressedLButton = TRUE;
+        return TRUE;
+    }
+    else if (input->pressedRButton && UseRegisteredKeyItemOnField(2))
+    {
+        gFieldInputRecord.pressedRButton = TRUE;
         return TRUE;
     }
 
@@ -1179,4 +1197,55 @@ int SetCableClubWarp(void)
     MapGridGetMetatileBehaviorAt(position.x, position.y);  // unnecessary
     SetupWarp(&gMapHeader, GetWarpEventAtMapPosition(&gMapHeader, &position), &position);
     return 0;
+}
+
+
+static u8 GetDirectionFromBitfield(u8 bitfield)
+{
+    u8 direction = 0;
+    while (bitfield >>= 1) direction++;
+    return direction;
+}
+
+static void SetDirectionFromHeldKeys(u16 heldKeys)
+{
+    u8 dpadDirections = 0;
+
+    if (heldKeys & DPAD_UP)
+        dpadDirections |= (1 << DIR_NORTH);
+    if (heldKeys & DPAD_DOWN)
+        dpadDirections |= (1 << DIR_SOUTH);
+    if (heldKeys & DPAD_LEFT)
+        dpadDirections |= (1 << DIR_WEST);
+    if (heldKeys & DPAD_RIGHT)
+        dpadDirections |= (1 << DIR_EAST);
+
+    if (dpadDirections == 0) // no dir is pushed
+    {
+        sCurrentDirection = DIR_NONE;
+        sPreviousDirection = DIR_NONE;
+        return;
+    }
+
+    if ((dpadDirections & (dpadDirections - 1)) == 0) // only 1 dir is pushed
+    {
+        // simply set currDir to that dir
+        sCurrentDirection = GetDirectionFromBitfield(dpadDirections);
+        sPreviousDirection = DIR_NONE;
+        return;
+    }
+
+    if (((dpadDirections >> sCurrentDirection) & 1) == 0) // none of the multiple dirs pushed is currDir
+    {
+        sCurrentDirection = DIR_NONE;
+        sPreviousDirection = DIR_NONE;
+    }
+    else if ((sPreviousDirection == DIR_NONE) || (((dpadDirections >> sPreviousDirection) & 1) == 0))
+    {
+        // turn
+        sCurrentDirection = GetDirectionFromBitfield(dpadDirections & ~(1 << sCurrentDirection));
+        sPreviousDirection = sCurrentDirection;
+    }
+    // else, currDir and prevDir are the dirs pushed
+    // do nothing (keep the same currDir and prevDir)
 }

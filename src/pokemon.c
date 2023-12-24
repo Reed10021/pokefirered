@@ -3,8 +3,10 @@
 #include "global.h"
 #include "gflib.h"
 #include "random.h"
+#include "rtc.h"
 #include "text.h"
 #include "data.h"
+#include "daycare.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "item.h"
@@ -23,6 +25,7 @@
 #include "overworld.h"
 #include "party_menu.h"
 #include "field_specials.h"
+#include "roamer.h"
 #include "berry.h"
 #include "constants/items.h"
 #include "constants/item_effects.h"
@@ -36,6 +39,7 @@
 #include "constants/hold_effects.h"
 #include "constants/battle_move_effects.h"
 #include "constants/union_room.h"
+#include "constants/layouts.h"
 
 #define SPECIES_TO_HOENN(name)      [SPECIES_##name - 1] = HOENN_DEX_##name
 #define SPECIES_TO_NATIONAL(name)   [SPECIES_##name - 1] = NATIONAL_DEX_##name
@@ -64,20 +68,18 @@ EWRAM_DATA struct SpriteTemplate gMultiuseSpriteTemplate = {0};
 static EWRAM_DATA struct MonSpritesGfxManager *sMonSpritesGfxManager = NULL;
 
 static union PokemonSubstruct *GetSubstruct(struct BoxPokemon *boxMon, u32 personality, u8 substructType);
-static u16 GetDeoxysStat(struct Pokemon *mon, s32 statId);
+//static u16 GetDeoxysStat(struct Pokemon *mon, s32 statId);
 static bool8 IsShinyOtIdPersonality(u32 otId, u32 personality);
 static u16 ModifyStatByNature(u8 nature, u16 n, u8 statIndex);
-static u8 GetNatureFromPersonality(u32 personality);
+//static u8 GetNatureFromPersonality(u32 personality);
 static bool8 PartyMonHasStatus(struct Pokemon *mon, u32 unused, u32 healMask, u8 battleId);
 static bool8 HealStatusConditions(struct Pokemon *mon, u32 unused, u32 healMask, u8 battleId);
 static bool8 IsPokemonStorageFull(void);
 static u8 SendMonToPC(struct Pokemon* mon);
-static void EncryptBoxMon(struct BoxPokemon *boxMon);
 static void DeleteFirstMoveAndGiveMoveToBoxMon(struct BoxPokemon *boxMon, u16 move);
 static void GiveBoxMonInitialMoveset(struct BoxPokemon *boxMon);
 static u16 GiveMoveToBoxMon(struct BoxPokemon *boxMon, u16 move);
 static u8 GetLevelFromMonExp(struct Pokemon *mon);
-static u16 CalculateBoxMonChecksum(struct BoxPokemon *boxMon);
 
 #include "data/battle_moves.h"
 
@@ -929,6 +931,9 @@ static const u16 sSpeciesToNationalPokedexNum[NUM_SPECIES - 1] =
     SPECIES_TO_NATIONAL(JIRACHI),
     SPECIES_TO_NATIONAL(DEOXYS),
     SPECIES_TO_NATIONAL(CHIMECHO),
+    [SPECIES_DEOXYS_ATTACK - 1] = NATIONAL_DEX_DEOXYS,
+    [SPECIES_DEOXYS_DEFENSE - 1] = NATIONAL_DEX_DEOXYS,
+    [SPECIES_DEOXYS_SPEED - 1] = NATIONAL_DEX_DEOXYS,
 };
 
 // Assigns all Hoenn Dex Indexes to a National Dex Index
@@ -1357,7 +1362,7 @@ static const struct SpindaSpot sSpindaSpotGraphics[] =
 
 #include "data/pokemon/item_effects.h"
 
-static const s8 sNatureStatTable[NUM_NATURES][NUM_NATURE_STATS] =
+const s8 sNatureStatTable[NUM_NATURES][NUM_NATURE_STATS] =
 {                      // Attack  Defense  Speed  Sp.Atk  Sp.Def
     [NATURE_HARDY]   = {    0,      0,      0,      0,      0   },
     [NATURE_LONELY]  = {   +1,     -1,      0,      0,      0   },
@@ -1637,6 +1642,26 @@ static const u16 sHMMoves[] =
     MOVE_ROCK_SMASH, MOVE_WATERFALL, MOVE_DIVE, HM_MOVES_END
 };
 
+struct SpeciesItem
+{
+    u16 species;
+    u16 item;
+};
+
+// ALTERING_CAVE
+static const struct SpeciesItem sAlteringCaveWildMonHeldItems[] =
+{
+    {SPECIES_NONE,      ITEM_NONE},
+    {SPECIES_MAREEP,    ITEM_GANLON_BERRY},
+    {SPECIES_PINECO,    ITEM_APICOT_BERRY},
+    {SPECIES_HOUNDOUR,  ITEM_BIG_MUSHROOM},
+    {SPECIES_TEDDIURSA, ITEM_PETAYA_BERRY},
+    {SPECIES_AIPOM,     ITEM_BERRY_JUICE},
+    {SPECIES_SHUCKLE,   ITEM_BERRY_JUICE},
+    {SPECIES_STANTLER,  ITEM_PETAYA_BERRY},
+    {SPECIES_SMEARGLE,  ITEM_SALAC_BERRY},
+};
+
 #if defined(FIRERED)
 // Attack forme
 static const u16 sDeoxysBaseStats[] = 
@@ -1769,6 +1794,10 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
     u32 personality;
     u32 value;
     u16 checksum;
+    u16 trueChainCount = VarGet(VAR_CHAIN);
+    u32 adjustedChainCount = trueChainCount + 40; // Add some constant rerolls to the base chain rate because hard.
+    u16 eggChainCount = VarGet(VAR_EGG_CHAIN);
+    u8 legendaryCheck = 0;
 
     ZeroBoxMonData(boxMon);
 
@@ -1777,30 +1806,95 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
     else
         personality = Random32();
 
-    SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
+    //SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
 
     //Determine original trainer ID
-    if (otIdType == OT_ID_RANDOM_NO_SHINY) //Pokemon cannot be shiny
-    {
-        u32 shinyValue;
-        do
-        {
-            value = Random32();
-            shinyValue = GET_SHINY_VALUE(value, personality);
-        } while (shinyValue < SHINY_ODDS);
-    }
-    else if (otIdType == OT_ID_PRESET) //Pokemon has a preset OT ID
+    //if (otIdType == OT_ID_RANDOM_NO_SHINY) //Pokemon cannot be shiny
+    //{
+    //    value = (Random() << 0x10) | Random() % 65536;
+    //}
+    /*else*/ if (otIdType == OT_ID_PRESET) //Pokemon has a preset OT ID
     {
         value = fixedOtId;
     }
     else //Player is the OT
     {
-        value = gSaveBlock2Ptr->playerTrainerId[0]
-              | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
-              | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
-              | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
-    }
+        if (otIdType == OT_ID_RANDOM_NO_SHINY)
+            value = (Random() << 0x10) | Random();
+        else
+            value = gSaveBlock2Ptr->playerTrainerId[0]
+                  | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
+                  | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
+                  | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
+        switch (species)
+        {
+        case SPECIES_ARTICUNO:
+        case SPECIES_ZAPDOS:
+        case SPECIES_MOLTRES:
+        case SPECIES_MEWTWO:
+        case SPECIES_MEW:
+        case SPECIES_RAIKOU:
+        case SPECIES_ENTEI:
+        case SPECIES_SUICUNE:
+        case SPECIES_LUGIA:
+        case SPECIES_HO_OH:
+        case SPECIES_CELEBI:
+        case SPECIES_REGIROCK:
+        case SPECIES_REGICE:
+        case SPECIES_REGISTEEL:
+        case SPECIES_GROUDON:
+        case SPECIES_KYOGRE:
+        case SPECIES_RAYQUAZA:
+        case SPECIES_LATIAS:
+        case SPECIES_LATIOS:
+        case SPECIES_DEOXYS:
+        case SPECIES_JIRACHI:
+        case SPECIES_DEOXYS_ATTACK:
+        case SPECIES_DEOXYS_DEFENSE:
+        case SPECIES_DEOXYS_SPEED:
+            adjustedChainCount += 250; // Use the current chain and increment it by 250. VAR_CHAIN is u16, chainCount is u32. So no overflow, as we don't save this value back into VAR_CHAIN.
+            legendaryCheck = 1;
+            break;
+        }
 
+        if (GetSpeciesFromRoamer() == species)
+        {
+            adjustedChainCount += 500; // Give the player a decent shot at shiny roamers.
+            legendaryCheck = 1;
+        }
+
+        // Reward long chains that haven't broken
+        if (trueChainCount >= 250)
+            adjustedChainCount += (trueChainCount * 4);
+        else if (trueChainCount >= 160)
+            adjustedChainCount += (trueChainCount * 3);
+        else if (trueChainCount >= 110)
+            adjustedChainCount += (trueChainCount * 2);
+        else if (trueChainCount >= 70)
+            adjustedChainCount += 90 + trueChainCount;
+        else if (trueChainCount >= 40)
+            adjustedChainCount += 40 + trueChainCount;
+        else if (trueChainCount >= 10)
+            adjustedChainCount += trueChainCount;
+        if (!hasFixedPersonality || otIdType == OT_ID_RANDOM_NO_SHINY) // Respect fixed personality (i.e eggs)
+        {
+            // Check the first personality roll.
+            if (!IsPersonalityShiny(personality, value)) // If not already shiny, do the additional rolls. That way the first roll counts.
+            {
+                u32 rolls = 0; // If we're chaining, we get rolls equal to chainCount. So a chainCount of 24 = 24 additional rolls for shiny.
+                // Hijack the chain system to make legendary pokemon have a higher shiny chance. In a non-randomizer you only get these once, so make it easier to reset.
+
+                if (VarGet(VAR_SPECIESCHAINED) != species && legendaryCheck != 1)
+                    rolls = adjustedChainCount / 2; // If this is a pokemon we're not chaining, we get rolls equal to chainCount divided by 2. So a chainCount of 20 = 10 additional rolls for shiny.
+                do
+                {
+                    personality = Random32();
+                    rolls++;
+                } while (!IsPersonalityShiny(personality, value) && rolls < adjustedChainCount); // While not shiny (>= as opposed to < for the check) and while we haven't exceeded VAR_CHAIN rolls.
+            }
+        }
+    }
+    SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
     SetBoxMonData(boxMon, MON_DATA_OT_ID, &value);
 
     checksum = CalculateBoxMonChecksum(boxMon);
@@ -1833,28 +1927,130 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
     else
     {
         u32 iv;
-        value = Random();
+        u32 rolls = 1;
+        u8 ivFlag = 0;
+        if (legendaryCheck == 1 || (trueChainCount >= 3 && VarGet(VAR_SPECIESCHAINED) == species)) {
+            rolls += 2 + (adjustedChainCount / 2);
+            if (trueChainCount >= 200)
+                ivFlag = 5;
+            else if (trueChainCount >= 120 || legendaryCheck == 1)
+                ivFlag = 4;
+            else if (trueChainCount >= 60)
+                ivFlag = 3;
+            else if (trueChainCount >= 30)
+                ivFlag = 2;
+            else
+                ivFlag = 1;
+        }
+        else if (eggChainCount >= 3 && GetBoxMonData(boxMon, MON_DATA_IS_EGG, NULL)) {
+            rolls += 2 + (eggChainCount / 2);
+            if (eggChainCount >= 200)
+                ivFlag = 5;
+            else if (eggChainCount >= 120)
+                ivFlag = 4;
+            else if (eggChainCount >= 60)
+                ivFlag = 3;
+            else if (eggChainCount >= 30)
+                ivFlag = 2;
+            else
+                ivFlag = 1;
+        }
+        else if (trueChainCount >= 3) { // VarGet(VAR_SPECIESCHAINED) != species
+            rolls += 2 + (adjustedChainCount / 5);
+            if (trueChainCount >= 200)
+                ivFlag = 5;
+            else if (trueChainCount >= 120)
+                ivFlag = 4;
+            else if (trueChainCount >= 60)
+                ivFlag = 3;
+            else if (trueChainCount >= 30)
+                ivFlag = 2;
+            else
+                ivFlag = 1;
+        }
 
-        iv = value & MAX_IV_MASK;
-        SetBoxMonData(boxMon, MON_DATA_HP_IV, &iv);
-        iv = (value & (MAX_IV_MASK << 5)) >> 5;
-        SetBoxMonData(boxMon, MON_DATA_ATK_IV, &iv);
-        iv = (value & (MAX_IV_MASK << 10)) >> 10;
-        SetBoxMonData(boxMon, MON_DATA_DEF_IV, &iv);
+        do
+        {
+            value = Random();
 
-        value = Random();
+            iv = value & MAX_IV_MASK;
+            SetBoxMonData(boxMon, MON_DATA_HP_IV, &iv);
+            iv = (value & (MAX_IV_MASK << 5)) >> 5;
+            SetBoxMonData(boxMon, MON_DATA_ATK_IV, &iv);
+            iv = (value & (MAX_IV_MASK << 10)) >> 10;
+            SetBoxMonData(boxMon, MON_DATA_DEF_IV, &iv);
 
-        iv = value & MAX_IV_MASK;
-        SetBoxMonData(boxMon, MON_DATA_SPEED_IV, &iv);
-        iv = (value & (MAX_IV_MASK << 5)) >> 5;
-        SetBoxMonData(boxMon, MON_DATA_SPATK_IV, &iv);
-        iv = (value & (MAX_IV_MASK << 10)) >> 10;
-        SetBoxMonData(boxMon, MON_DATA_SPDEF_IV, &iv);
+            value = Random();
+
+            iv = value & MAX_IV_MASK;
+            SetBoxMonData(boxMon, MON_DATA_SPEED_IV, &iv);
+            iv = (value & (MAX_IV_MASK << 5)) >> 5;
+            SetBoxMonData(boxMon, MON_DATA_SPATK_IV, &iv);
+            iv = (value & (MAX_IV_MASK << 10)) >> 10;
+            SetBoxMonData(boxMon, MON_DATA_SPDEF_IV, &iv);
+
+            if (ivFlag != 0) {
+                if (ivFlag == 1) {
+                    if (GetBoxMonData(boxMon, MON_DATA_HP_IV, NULL) >= 10
+                        && GetBoxMonData(boxMon, MON_DATA_ATK_IV, NULL) >= 10
+                        && GetBoxMonData(boxMon, MON_DATA_DEF_IV, NULL) >= 10
+                        && GetBoxMonData(boxMon, MON_DATA_SPEED_IV, NULL) >= 10
+                        && GetBoxMonData(boxMon, MON_DATA_SPATK_IV, NULL) >= 10
+                        && GetBoxMonData(boxMon, MON_DATA_SPDEF_IV, NULL) >= 10) {
+                        break;
+                    }
+                }
+                else if (ivFlag == 2) {
+                    if (GetBoxMonData(boxMon, MON_DATA_HP_IV, NULL) >= 15
+                        && GetBoxMonData(boxMon, MON_DATA_ATK_IV, NULL) >= 15
+                        && GetBoxMonData(boxMon, MON_DATA_DEF_IV, NULL) >= 15
+                        && GetBoxMonData(boxMon, MON_DATA_SPEED_IV, NULL) >= 15
+                        && GetBoxMonData(boxMon, MON_DATA_SPATK_IV, NULL) >= 15
+                        && GetBoxMonData(boxMon, MON_DATA_SPDEF_IV, NULL) >= 15) {
+                        break;
+                    }
+                }
+                else if (ivFlag == 3) {
+                    if (GetBoxMonData(boxMon, MON_DATA_HP_IV, NULL) >= 20
+                        && GetBoxMonData(boxMon, MON_DATA_ATK_IV, NULL) >= 20
+                        && GetBoxMonData(boxMon, MON_DATA_DEF_IV, NULL) >= 20
+                        && GetBoxMonData(boxMon, MON_DATA_SPEED_IV, NULL) >= 20
+                        && GetBoxMonData(boxMon, MON_DATA_SPATK_IV, NULL) >= 20
+                        && GetBoxMonData(boxMon, MON_DATA_SPDEF_IV, NULL) >= 20) {
+                        break;
+                    }
+                }
+                else if (ivFlag == 4) {
+                    if (GetBoxMonData(boxMon, MON_DATA_HP_IV, NULL) >= 25
+                        && GetBoxMonData(boxMon, MON_DATA_ATK_IV, NULL) >= 25
+                        && GetBoxMonData(boxMon, MON_DATA_DEF_IV, NULL) >= 25
+                        && GetBoxMonData(boxMon, MON_DATA_SPEED_IV, NULL) >= 25
+                        && GetBoxMonData(boxMon, MON_DATA_SPATK_IV, NULL) >= 25
+                        && GetBoxMonData(boxMon, MON_DATA_SPDEF_IV, NULL) >= 25) {
+                        break;
+                    }
+                }
+                else if (ivFlag == 5) {
+                    if (GetBoxMonData(boxMon, MON_DATA_HP_IV, NULL) >= 30
+                        && GetBoxMonData(boxMon, MON_DATA_ATK_IV, NULL) >= 30
+                        && GetBoxMonData(boxMon, MON_DATA_DEF_IV, NULL) >= 30
+                        && GetBoxMonData(boxMon, MON_DATA_SPEED_IV, NULL) >= 30
+                        && GetBoxMonData(boxMon, MON_DATA_SPATK_IV, NULL) >= 30
+                        && GetBoxMonData(boxMon, MON_DATA_SPDEF_IV, NULL) >= 30) {
+                        break;
+                    }
+                }
+            }
+            rolls--;
+        } while (rolls > 0);
     }
 
     if (gSpeciesInfo[species].abilities[1])
     {
-        value = personality & 1;
+        if (otIdType == OT_ID_RANDOM_NO_SHINY)
+            value = 0;
+        else
+            value = personality & 1;
         SetBoxMonData(boxMon, MON_DATA_ABILITY_NUM, &value);
     }
 
@@ -1863,42 +2059,179 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
 
 void CreateMonWithNature(struct Pokemon *mon, u16 species, u8 level, u8 fixedIV, u8 nature)
 {
-    u32 personality;
+    u32 personality = Random32();
+    bool8 shinyFlag = FALSE;
 
-    do
+    {
+        u16 trueChainCount = VarGet(VAR_CHAIN);
+        u32 adjustedChainCount = trueChainCount + 40; // Add some constant rerolls to the base chain rate because hard.
+        u8 legendaryCheck = 0;
+        if (!IsPersonalityShiny(personality, 0)) // If not already shiny, do the additional rolls. That way the first roll counts.
+        {
+            u32 rolls = 0; // If we're chaining, we get rolls equal to chainCount. So a chainCount of 24 = 24 additional rolls for shiny.
+            // Hijack the chain system to make legendary pokemon have a higher shiny chance. In a non-randomizer you only get these once, so make it easier to reset.
+            switch (species)
+            {
+            case SPECIES_ARTICUNO:
+            case SPECIES_ZAPDOS:
+            case SPECIES_MOLTRES:
+            case SPECIES_MEWTWO:
+            case SPECIES_MEW:
+            case SPECIES_RAIKOU:
+            case SPECIES_ENTEI:
+            case SPECIES_SUICUNE:
+            case SPECIES_LUGIA:
+            case SPECIES_HO_OH:
+            case SPECIES_CELEBI:
+            case SPECIES_REGIROCK:
+            case SPECIES_REGICE:
+            case SPECIES_REGISTEEL:
+            case SPECIES_GROUDON:
+            case SPECIES_KYOGRE:
+            case SPECIES_RAYQUAZA:
+            case SPECIES_LATIAS:
+            case SPECIES_LATIOS:
+            case SPECIES_DEOXYS:
+            case SPECIES_JIRACHI:
+            case SPECIES_DEOXYS_ATTACK:
+            case SPECIES_DEOXYS_DEFENSE:
+            case SPECIES_DEOXYS_SPEED:
+                adjustedChainCount += 250; // Use the current chain and increment it by 250. VAR_CHAIN is u16, chainCount is u32. So no overflow, as we don't save this value back into VAR_CHAIN.
+                legendaryCheck = 1;
+            }
+
+            // Reward long chains that haven't broken
+            if (trueChainCount >= 250)
+                adjustedChainCount += (trueChainCount * 4);
+            else if (trueChainCount >= 160)
+                adjustedChainCount += (trueChainCount * 3);
+            else if (trueChainCount >= 110)
+                adjustedChainCount += (trueChainCount * 2);
+            else if (trueChainCount >= 70)
+                adjustedChainCount += 90 + trueChainCount;
+            else if (trueChainCount >= 40)
+                adjustedChainCount += 40 + trueChainCount;
+            else if (trueChainCount >= 10)
+                adjustedChainCount += trueChainCount;
+
+            if (VarGet(VAR_SPECIESCHAINED) != species && legendaryCheck != 1)
+                rolls = adjustedChainCount / 2; // If this is a pokemon we're not chaining, we get rolls equal to chainCount divided by 2. So a chainCount of 20 = 10 additional rolls for shiny.
+            do
+            {
+                personality = Random32();
+                rolls++;
+            } while (!IsPersonalityShiny(personality, 0) && rolls < adjustedChainCount); // While not shiny (>= as opposed to < for the check) and while we haven't exceeded VAR_CHAIN rolls.
+        }
+    }
+
+    if (IsPersonalityShiny(personality, 0))
+        shinyFlag = TRUE;
+
+    // Do this check after we've rolled chain shininess. Prevents near-infinite loops and in-game slowdowns.
+    // If we rolled a shiny and the nature doesn't match, keep shininess and roll nature.
+    while (nature != GetNatureFromPersonality(personality))
     {
         personality = Random32();
+        if (shinyFlag)
+            ForceShiny(personality);
     }
-    while (nature != GetNatureFromPersonality(personality));
 
     CreateMon(mon, species, level, fixedIV, TRUE, personality, OT_ID_PLAYER_ID, 0);
 }
 
 void CreateMonWithGenderNatureLetter(struct Pokemon *mon, u16 species, u8 level, u8 fixedIV, u8 gender, u8 nature, u8 unownLetter)
 {
-    u32 personality;
+    u32 personality = Random32();
+    bool8 shinyFlag = FALSE;
 
-    if ((u8)(unownLetter - 1) < NUM_UNOWN_FORMS)
     {
-        u16 actualLetter;
+        u16 trueChainCount = VarGet(VAR_CHAIN);
+        u32 adjustedChainCount = trueChainCount + 40; // Add some constant rerolls to the base chain rate because hard.
+        u8 legendaryCheck = 0;
 
-        do
+        if (!IsPersonalityShiny(personality, 0)) // If not already shiny, do the additional rolls. That way the first roll counts.
         {
-            personality = Random32();
-            actualLetter = GET_UNOWN_LETTER(personality);
+            u32 rolls = 0; // If we're chaining, we get rolls equal to chainCount. So a chainCount of 24 = 24 additional rolls for shiny.
+            // Hijack the chain system to make legendary pokemon have a higher shiny chance. In a non-randomizer you only get these once, so make it easier to reset.
+            switch (species)
+            {
+            case SPECIES_ARTICUNO:
+            case SPECIES_ZAPDOS:
+            case SPECIES_MOLTRES:
+            case SPECIES_MEWTWO:
+            case SPECIES_MEW:
+            case SPECIES_RAIKOU:
+            case SPECIES_ENTEI:
+            case SPECIES_SUICUNE:
+            case SPECIES_LUGIA:
+            case SPECIES_HO_OH:
+            case SPECIES_CELEBI:
+            case SPECIES_REGIROCK:
+            case SPECIES_REGICE:
+            case SPECIES_REGISTEEL:
+            case SPECIES_GROUDON:
+            case SPECIES_KYOGRE:
+            case SPECIES_RAYQUAZA:
+            case SPECIES_LATIAS:
+            case SPECIES_LATIOS:
+            case SPECIES_DEOXYS:
+            case SPECIES_JIRACHI:
+            case SPECIES_DEOXYS_ATTACK:
+            case SPECIES_DEOXYS_DEFENSE:
+            case SPECIES_DEOXYS_SPEED:
+                adjustedChainCount += 250; // Use the current chain and increment it by 150. VAR_CHAIN is u16, chainCount is u32. So no overflow, as we don't save this value back into VAR_CHAIN.
+                legendaryCheck = 1;
+            }
+
+            // Reward long chains that haven't broken
+            if (trueChainCount >= 250)
+                adjustedChainCount += (trueChainCount * 4);
+            else if (trueChainCount >= 160)
+                adjustedChainCount += (trueChainCount * 3);
+            else if (trueChainCount >= 110)
+                adjustedChainCount += (trueChainCount * 2);
+            else if (trueChainCount >= 70)
+                adjustedChainCount += 90 + trueChainCount;
+            else if (trueChainCount >= 40)
+                adjustedChainCount += 40 + trueChainCount;
+            else if (trueChainCount >= 10)
+                adjustedChainCount += trueChainCount;
+
+            if (VarGet(VAR_SPECIESCHAINED) != species && legendaryCheck != 1)
+                rolls = adjustedChainCount / 2; // If this is a pokemon we're not chaining, we get rolls equal to chainCount divided by 2. So a chainCount of 20 = 10 additional rolls for shiny.
+            do
+            {
+                personality = Random32();
+                rolls++;
+            } while (!IsPersonalityShiny(personality, 0) && rolls < adjustedChainCount); // While not shiny (>= as opposed to < for the check) and while we haven't exceeded VAR_CHAIN rolls.
         }
+    }
+
+    if (IsPersonalityShiny(personality, 0))
+        shinyFlag = TRUE;
+
+    if ((u8)(unownLetter - 1) < 28)
+    {
+        u16 actualLetter = ((((personality & 0x3000000) >> 18) | ((personality & 0x30000) >> 12) | ((personality & 0x300) >> 6) | (personality & 0x3)) % 28);
         while (nature != GetNatureFromPersonality(personality)
             || gender != GetGenderFromSpeciesAndPersonality(species, personality)
-            || actualLetter != unownLetter - 1);
+            || actualLetter != unownLetter - 1)
+        {
+            personality = Random32();
+            if (shinyFlag)
+                ForceShiny(personality);
+            actualLetter = ((((personality & 0x3000000) >> 18) | ((personality & 0x30000) >> 12) | ((personality & 0x300) >> 6) | (personality & 0x3)) % 28);
+        }
     }
     else
     {
-        do
+        while (nature != GetNatureFromPersonality(personality)
+            || gender != GetGenderFromSpeciesAndPersonality(species, personality))
         {
             personality = Random32();
+            if (shinyFlag)
+                ForceShiny(personality);
         }
-        while (nature != GetNatureFromPersonality(personality)
-            || gender != GetGenderFromSpeciesAndPersonality(species, personality));
     }
 
     CreateMon(mon, species, level, fixedIV, TRUE, personality, OT_ID_PLAYER_ID, 0);
@@ -2066,7 +2399,7 @@ void ConvertPokemonToBattleTowerPokemon(struct Pokemon *mon, struct BattleTowerP
     GetMonData(mon, MON_DATA_NICKNAME, dest->nickname);
 }
 
-static u16 CalculateBoxMonChecksum(struct BoxPokemon *boxMon)
+u16 CalculateBoxMonChecksum(struct BoxPokemon *boxMon)
 {
     u16 checksum = 0;
     union PokemonSubstruct *substruct0 = GetSubstruct(boxMon, boxMon->personality, 0);
@@ -2121,7 +2454,8 @@ void CalculateMonStats(struct Pokemon *mon)
 
     SetMonData(mon, MON_DATA_LEVEL, &level);
 
-    if (species == SPECIES_SHEDINJA)
+    // if (species == SPECIES_SHEDINJA)
+    if (gSpeciesInfo[species].baseHP == 1)
     {
         newMaxHP = 1;
     }
@@ -2143,7 +2477,8 @@ void CalculateMonStats(struct Pokemon *mon)
     CALC_STAT(baseSpAttack, spAttackIV, spAttackEV, STAT_SPATK, MON_DATA_SPATK)
     CALC_STAT(baseSpDefense, spDefenseIV, spDefenseEV, STAT_SPDEF, MON_DATA_SPDEF)
 
-    if (species == SPECIES_SHEDINJA)
+    //if (species == SPECIES_SHEDINJA)
+    if (gSpeciesInfo[species].baseHP == 1)
     {
         if (currentHP != 0 || oldMaxHP == 0)
             currentHP = 1;
@@ -2461,18 +2796,19 @@ s32 CalculateBaseDamage(struct BattlePokemon *attacker, struct BattlePokemon *de
     }
 
     // Apply boosts from hold items
-    if (attackerHoldEffect == HOLD_EFFECT_CHOICE_BAND)
-        attack = (150 * attack) / 100;
-    if (attackerHoldEffect == HOLD_EFFECT_SOUL_DEW && !(gBattleTypeFlags & (BATTLE_TYPE_BATTLE_TOWER)) && (attacker->species == SPECIES_LATIAS || attacker->species == SPECIES_LATIOS))
+    if (attackerHoldEffect == HOLD_EFFECT_SOUL_DEW && (attacker->species == SPECIES_LATIAS || attacker->species == SPECIES_LATIOS))
         spAttack = (150 * spAttack) / 100;
-    if (defenderHoldEffect == HOLD_EFFECT_SOUL_DEW && !(gBattleTypeFlags & (BATTLE_TYPE_BATTLE_TOWER)) && (defender->species == SPECIES_LATIAS || defender->species == SPECIES_LATIOS))
+    if (defenderHoldEffect == HOLD_EFFECT_SOUL_DEW && (defender->species == SPECIES_LATIAS || defender->species == SPECIES_LATIOS))
         spDefense = (150 * spDefense) / 100;
     if (attackerHoldEffect == HOLD_EFFECT_DEEP_SEA_TOOTH && attacker->species == SPECIES_CLAMPERL)
         spAttack *= 2;
     if (defenderHoldEffect == HOLD_EFFECT_DEEP_SEA_SCALE && defender->species == SPECIES_CLAMPERL)
         spDefense *= 2;
-    if (attackerHoldEffect == HOLD_EFFECT_LIGHT_BALL && attacker->species == SPECIES_PIKACHU)
+    if (attackerHoldEffect == HOLD_EFFECT_LIGHT_BALL && (attacker->species == SPECIES_PIKACHU || attacker->species == SPECIES_PICHU))
+    {
         spAttack *= 2;
+        attack *= 2;
+    }
     if (defenderHoldEffect == HOLD_EFFECT_METAL_POWDER && defender->species == SPECIES_DITTO)
         defense *= 2;
     if (attackerHoldEffect == HOLD_EFFECT_THICK_CLUB && (attacker->species == SPECIES_CUBONE || attacker->species == SPECIES_MAROWAK))
@@ -2501,10 +2837,22 @@ s32 CalculateBaseDamage(struct BattlePokemon *attacker, struct BattlePokemon *de
         gBattleMovePower = (150 * gBattleMovePower) / 100;
     if (type == TYPE_BUG && attacker->ability == ABILITY_SWARM && attacker->hp <= (attacker->maxHP / 3))
         gBattleMovePower = (150 * gBattleMovePower) / 100;
-
+    if (attackerHoldEffect == HOLD_EFFECT_CHOICE_BAND)
+        gBattleMovePower = (150 * gBattleMovePower) / 100;
     // Self-destruct / Explosion cut defense in half
     if (gBattleMoves[gCurrentMove].effect == EFFECT_EXPLOSION)
         defense /= 2;
+    //hailing
+    if (WEATHER_HAS_EFFECT && gBattleWeather & B_WEATHER_HAIL) {
+        // Implement gen 9 snow effect: +50% DEF for hail.
+        if (defender->type1 == TYPE_ICE || defender->type2 == TYPE_ICE)
+            defense = (150 * defense) / 100;
+    }
+    if (WEATHER_HAS_EFFECT && gBattleWeather & B_WEATHER_SANDSTORM) {
+        // Implement gen 4 sandstorm effect: +50% SPDEF.
+        if (defender->type1 == TYPE_ROCK || defender->type2 == TYPE_ROCK)
+            spDefense = (150 * spDefense) / 100;
+    }
 
     if (IS_TYPE_PHYSICAL(type))
     {
@@ -2537,7 +2885,7 @@ s32 CalculateBaseDamage(struct BattlePokemon *attacker, struct BattlePokemon *de
         damage /= 50;
 
         // Burn cuts attack in half
-        if ((attacker->status1 & STATUS1_BURN) && attacker->ability != ABILITY_GUTS)
+        if ((attacker->status1 & STATUS1_BURN) && attacker->ability != ABILITY_GUTS && move != MOVE_FACADE)
             damage /= 2;
 
         // Apply Reflect
@@ -2605,10 +2953,10 @@ s32 CalculateBaseDamage(struct BattlePokemon *attacker, struct BattlePokemon *de
             damage /= 2;
 
         // Are effects of weather negated with cloud nine or air lock
-        if (WEATHER_HAS_EFFECT2)
+        if (WEATHER_HAS_EFFECT)
         {
             // Rain weakens Fire, boosts Water
-            if (gBattleWeather & B_WEATHER_RAIN_TEMPORARY)
+            if (gBattleWeather & B_WEATHER_RAIN)
             {
                 switch (type)
                 {
@@ -2622,7 +2970,7 @@ s32 CalculateBaseDamage(struct BattlePokemon *attacker, struct BattlePokemon *de
             }
 
             // Any weather except sun weakens solar beam
-            if ((gBattleWeather & (B_WEATHER_RAIN | B_WEATHER_SANDSTORM | B_WEATHER_HAIL_TEMPORARY)) && gCurrentMove == MOVE_SOLAR_BEAM)
+            if ((gBattleWeather & (B_WEATHER_RAIN | B_WEATHER_SANDSTORM | B_WEATHER_HAIL)) && gCurrentMove == MOVE_SOLAR_BEAM)
                 damage /= 2;
 
             // Sun boosts Fire, weakens Water
@@ -2794,7 +3142,7 @@ void SetMultiuseSpriteTemplateToTrainerBack(u16 trainerSpriteId, u8 battlerPosit
     }
 }
 
-static void EncryptBoxMon(struct BoxPokemon *boxMon)
+void EncryptBoxMon(struct BoxPokemon *boxMon)
 {
     u32 i;
     for (i = 0; i < ARRAY_COUNT(boxMon->secure.raw); i++)
@@ -2804,7 +3152,7 @@ static void EncryptBoxMon(struct BoxPokemon *boxMon)
     }
 }
 
-static void DecryptBoxMon(struct BoxPokemon *boxMon)
+void DecryptBoxMon(struct BoxPokemon *boxMon)
 {
     u32 i;
     for (i = 0; i < ARRAY_COUNT(boxMon->secure.raw); i++)
@@ -2914,28 +3262,28 @@ u32 GetMonData(struct Pokemon *mon, s32 field, u8 *data)
         ret = mon->maxHP;
         break;
     case MON_DATA_ATK:
-        ret = GetDeoxysStat(mon, STAT_ATK);
-        if (!ret)
+        //ret = GetDeoxysStat(mon, STAT_ATK);
+        //if (!ret)
             ret = mon->attack;
         break;
     case MON_DATA_DEF:
-        ret = GetDeoxysStat(mon, STAT_DEF);
-        if (!ret)
+        //ret = GetDeoxysStat(mon, STAT_DEF);
+        //if (!ret)
             ret = mon->defense;
         break;
     case MON_DATA_SPEED:
-        ret = GetDeoxysStat(mon, STAT_SPEED);
-        if (!ret)
+        //ret = GetDeoxysStat(mon, STAT_SPEED);
+        //if (!ret)
             ret = mon->speed;
         break;
     case MON_DATA_SPATK:
-        ret = GetDeoxysStat(mon, STAT_SPATK);
-        if (!ret)
+        //ret = GetDeoxysStat(mon, STAT_SPATK);
+        //if (!ret)
             ret = mon->spAttack;
         break;
     case MON_DATA_SPDEF:
-        ret = GetDeoxysStat(mon, STAT_SPDEF);
-        if (!ret)
+        //ret = GetDeoxysStat(mon, STAT_SPDEF);
+        //if (!ret)
             ret = mon->spDefense;
         break;
     case MON_DATA_ATK2:
@@ -3963,7 +4311,7 @@ bool8 ExecuteTableBasedItemEffect(struct Pokemon *mon, u16 item, u8 partyIndex, 
 
 #define UPDATE_FRIENDSHIP_FROM_ITEM()                                                                   \
 {                                                                                                       \
-    if (retVal == 0 && friendshipChange == 0)                                                           \
+    if ((retVal == 0 || friendshipOnly) && friendshipChange == 0)                                                           \
     {                                                                                                   \
         friendshipChange = itemEffect[idx];                                                             \
         friendship = GetMonData(mon, MON_DATA_FRIENDSHIP, NULL);                                        \
@@ -3989,18 +4337,23 @@ bool8 ExecuteTableBasedItemEffect(struct Pokemon *mon, u16 item, u8 partyIndex, 
 bool8 PokemonUseItemEffects(struct Pokemon *mon, u16 item, u8 partyIndex, u8 moveIndex, bool8 usedByAI)
 {
     u32 data;
+    s32 dataSigned;
     s32 friendship;
     s32 cmdIndex;
     bool8 retVal = TRUE;
     const u8 *itemEffect;
     u8 idx = ITEM_EFFECT_ARG_START;
+    u32 temp2;
     u32 i;
     s8 friendshipChange = 0;
     u8 holdEffect;
     u8 battleMonId = MAX_BATTLERS_COUNT;
+    u32 friendshipOnly = FALSE;
     u16 heldItem;
     u8 val;
     u32 evDelta;
+    s8 evChange;
+    u16 evCount;
 
     // Get item hold effect
     heldItem = GetMonData(mon, MON_DATA_HELD_ITEM, NULL);
@@ -4210,7 +4563,6 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, u16 item, u8 partyIndex, u8 mov
             {
                 if (val & 1)
                 {
-                    u16 evCount;
                     s32 r5;
      
                     switch (i)
@@ -4218,28 +4570,48 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, u16 item, u8 partyIndex, u8 mov
                     case 0: // ITEM4_EV_HP
                     case 1: // ITEM4_EV_ATK
                         evCount = GetMonEVCount(mon);
+                        temp2 = itemEffect[idx];
+                        dataSigned = GetMonData(mon, sGetMonDataEVConstants[i], NULL);
+                        evChange = temp2;
 
-                        // Has EV increase limit already been reached?
-                        if (evCount >= MAX_TOTAL_EVS)
-                            return TRUE;
-                        data = GetMonData(mon, sGetMonDataEVConstants[i], NULL);
-                        if (data < EV_ITEM_RAISE_LIMIT)
+                        if (evChange > 0) // Increasing EV (HP or Atk)
                         {
-                            // Limit the increase
-                            if (data + itemEffect[idx] > EV_ITEM_RAISE_LIMIT)
-                                evDelta = EV_ITEM_RAISE_LIMIT - (data + itemEffect[idx]) + itemEffect[idx];
-                            else
-                                evDelta = itemEffect[idx];
-                            if (evCount + evDelta > MAX_TOTAL_EVS)
-                                evDelta += MAX_TOTAL_EVS - (evCount + evDelta);
+                            // Has EV increase limit already been reached?
+                            if (evCount >= MAX_TOTAL_EVS)
+                                return TRUE;
+                            if (dataSigned >= EV_ITEM_RAISE_LIMIT)
+                                break;
 
-                            // Update EVs and stats
-                            data += evDelta;
-                            SetMonData(mon, sGetMonDataEVConstants[i], &data);
-                            CalculateMonStats(mon);
-                            idx++;
-                            retVal = FALSE;
+                            // Limit the increase
+                            if (dataSigned + evChange > EV_ITEM_RAISE_LIMIT)
+                                temp2 = EV_ITEM_RAISE_LIMIT - (dataSigned + evChange) + evChange;
+                            else
+                                temp2 = evChange;
+
+                            if (evCount + temp2 > MAX_TOTAL_EVS)
+                                temp2 += MAX_TOTAL_EVS - (evCount + temp2);
+
+                            dataSigned += temp2;
                         }
+                        else // Decreasing EV (HP or Atk)
+                        {
+                            if (dataSigned == 0)
+                            {
+                                // No EVs to lose, but make sure friendship updates anyway
+                                friendshipOnly = TRUE;
+                                idx++;
+                                break;
+                            }
+                            dataSigned += evChange;
+                            if (dataSigned < 0)
+                                dataSigned = 0;
+                        }
+
+                        // Update EVs and stats
+                        SetMonData(mon, sGetMonDataEVConstants[i], &dataSigned);
+                        CalculateMonStats(mon);
+                        idx++;
+                        retVal = FALSE;
                         break;
                     case 2: // ITEM4_HEAL_HP
                         // If Revive, update number of times revive has been used
@@ -4425,28 +4797,47 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, u16 item, u8 partyIndex, u8 mov
                     case 2: // ITEM5_EV_SPDEF
                     case 3: // ITEM5_EV_SPATK
                         evCount = GetMonEVCount(mon);
-                        
-                        // Has EV increase limit already been reached?
-                        if (evCount >= MAX_TOTAL_EVS)
-                            return TRUE;
-                        data = GetMonData(mon, sGetMonDataEVConstants[i + 2], NULL);
-                        if (data < EV_ITEM_RAISE_LIMIT)
+                        temp2 = itemEffect[idx];
+                        dataSigned = GetMonData(mon, sGetMonDataEVConstants[i + 2], NULL);
+                        evChange = temp2;
+                        if (evChange > 0) // Increasing EV
                         {
+                            // Has EV increase limit already been reached?
+                            if (evCount >= MAX_TOTAL_EVS)
+                                return TRUE;
+                            if (dataSigned >= EV_ITEM_RAISE_LIMIT)
+                                break;
+
                             // Limit the increase
-                            if (data + itemEffect[idx] > EV_ITEM_RAISE_LIMIT)
-                                evDelta = EV_ITEM_RAISE_LIMIT - (data + itemEffect[idx]) + itemEffect[idx];
+                            if (dataSigned + evChange > EV_ITEM_RAISE_LIMIT)
+                                temp2 = EV_ITEM_RAISE_LIMIT - (dataSigned + evChange) + evChange;
                             else
-                                evDelta = itemEffect[idx];
-                            if (evCount + evDelta > MAX_TOTAL_EVS)
-                                evDelta += MAX_TOTAL_EVS - (evCount + evDelta);
-                            
-                            // Update EVs and stats
-                            data += evDelta;
-                            SetMonData(mon, sGetMonDataEVConstants[i + 2], &data);
-                            CalculateMonStats(mon);
-                            retVal = FALSE;
-                            idx++;
+                                temp2 = evChange;
+
+                            if (evCount + temp2 > MAX_TOTAL_EVS)
+                                temp2 += MAX_TOTAL_EVS - (evCount + temp2);
+
+                            dataSigned += temp2;
                         }
+                        else // Decreasing EV
+                        {
+                            if (dataSigned == 0)
+                            {
+                                // No EVs to lose, but make sure friendship updates anyway
+                                friendshipOnly = TRUE;
+                                idx++;
+                                break;
+                            }
+                            dataSigned += evChange;
+                            if (dataSigned < 0)
+                                dataSigned = 0;
+                        }
+
+                        // Update EVs and stats
+                        SetMonData(mon, sGetMonDataEVConstants[i + 2], &dataSigned);
+                        CalculateMonStats(mon);
+                        retVal = FALSE;
+                        idx++;
                         break;
                     case 4: // ITEM5_PP_MAX
                         data = (GetMonData(mon, MON_DATA_PP_BONUSES, NULL) & gPPUpGetMask[moveIndex]) >> (moveIndex * 2);
@@ -5005,7 +5396,7 @@ u8 GetNature(struct Pokemon *mon)
     return GetMonData(mon, MON_DATA_PERSONALITY, NULL) % NUM_NATURES;
 }
 
-static u8 GetNatureFromPersonality(u32 personality)
+u8 GetNatureFromPersonality(u32 personality)
 {
     return personality % NUM_NATURES;
 }
@@ -5048,18 +5439,14 @@ u16 GetEvolutionTargetSpecies(struct Pokemon *mon, u8 type, u16 evolutionItem)
                 break;
             // FR/LG removed the time of day evolutions due to having no RTC.
             case EVO_FRIENDSHIP_DAY:
-                /*
                 RtcCalcLocalTime();
-                if (gLocalTime.hours >= 12 && gLocalTime.hours < 24 && friendship >= 220)
+                if (gLocalTime.hours >= DAY_START && gLocalTime.hours < NIGHT_START && friendship >= 220)
                     targetSpecies = gEvolutionTable[species][i].targetSpecies;
-                */
                 break;
             case EVO_FRIENDSHIP_NIGHT:
-                /*
                 RtcCalcLocalTime();
-                if (gLocalTime.hours >= 0 && gLocalTime.hours < 12 && friendship >= 220)
+                if (gLocalTime.hours >= NIGHT_START && gLocalTime.hours < DAY_START && friendship >= 220)
                     targetSpecies = gEvolutionTable[species][i].targetSpecies;
-                */
                 break;
             case EVO_LEVEL:
                 if (gEvolutionTable[species][i].param <= level)
@@ -5100,6 +5487,7 @@ u16 GetEvolutionTargetSpecies(struct Pokemon *mon, u8 type, u16 evolutionItem)
         }
         break;
     case EVO_MODE_TRADE:
+    case EVO_MODE_TRADE_CHECK:
         for (i = 0; i < EVOS_PER_MON; i++)
         {
             switch (gEvolutionTable[species][i].method)
@@ -5113,7 +5501,8 @@ u16 GetEvolutionTargetSpecies(struct Pokemon *mon, u8 type, u16 evolutionItem)
                     targetSpecies = gEvolutionTable[species][i].targetSpecies;
                     
                     // Prevent cross-generational evolutions like Scizor and Steelix until the National Pokedex is obtained
-                    if (IsNationalPokedexEnabled() || targetSpecies <= KANTO_SPECIES_END)
+                    //if (IsNationalPokedexEnabled() || targetSpecies <= KANTO_SPECIES_END)
+                    if (type != EVO_MODE_TRADE_CHECK)
                     {
                         heldItem = ITEM_NONE;
                         SetMonData(mon, MON_DATA_HELD_ITEM, &heldItem);
@@ -5599,8 +5988,41 @@ u16 GetMonEVCount(struct Pokemon *mon)
 // whether it's used.
 void RandomlyGivePartyPokerus(struct Pokemon *party)
 {
-    u8 foo;
-    &foo;
+    //u8 foo;
+    //&foo;
+    u16 rnd = Random();
+    if (rnd == 0x4000 || rnd == 0x8000 || rnd == 0xC000)
+    {
+        struct Pokemon* mon;
+
+        do
+        {
+            do
+            {
+                rnd = Random() % PARTY_SIZE;
+                mon = &party[rnd];
+            } while (!GetMonData(mon, MON_DATA_SPECIES, 0));
+        } while (GetMonData(mon, MON_DATA_IS_EGG, 0));
+
+        if (!(CheckPartyHasHadPokerus(party, gBitTable[rnd])))
+        {
+            u8 rnd2;
+
+            do
+            {
+                rnd2 = Random();
+            } while ((rnd2 & 0x7) == 0);
+
+            if (rnd2 & 0xF0)
+                rnd2 &= 0x7;
+
+            rnd2 |= (rnd2 << 4);
+            rnd2 &= 0xF3;
+            rnd2++;
+
+            SetMonData(&party[rnd], MON_DATA_POKERUS, &rnd2);
+        }
+    }
 }
 
 u8 CheckPartyPokerus(struct Pokemon *party, u8 selection)
@@ -5661,16 +6083,62 @@ u8 CheckPartyHasHadPokerus(struct Pokemon *party, u8 selection)
 
 // These two functions are stubbed from RS, but they're stubbed badly.
 // See note on RandomlyGivePartyPokerus above.
-static void UpdatePartyPokerusTime(void)
+void UpdatePartyPokerusTime(u16 days)
 {
-    u8 foo;
-    &foo;
+    //u8 foo;
+    //&foo;
+    int i;
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        if (GetMonData(&gPlayerParty[i], MON_DATA_SPECIES, 0))
+        {
+            u8 pokerus = GetMonData(&gPlayerParty[i], MON_DATA_POKERUS, 0);
+            if (pokerus & 0xF)
+            {
+                if ((pokerus & 0xF) < days || days > 4)
+                    pokerus &= 0xF0;
+                else
+                    pokerus -= days;
+
+                if (pokerus == 0)
+                    pokerus = 0x10;
+
+                SetMonData(&gPlayerParty[i], MON_DATA_POKERUS, &pokerus);
+            }
+        }
+    }
 }
 
 void PartySpreadPokerus(struct Pokemon *party)
 {
-    u8 foo;
-    &foo;
+    //u8 foo;
+    //&foo;
+    if ((Random() % 3) == 0)
+    {
+        int i;
+        for (i = 0; i < PARTY_SIZE; i++)
+        {
+            if (GetMonData(&party[i], MON_DATA_SPECIES, 0))
+            {
+                u8 pokerus = GetMonData(&party[i], MON_DATA_POKERUS, 0);
+                u8 curPokerus = pokerus;
+                if (pokerus)
+                {
+                    if (pokerus & 0xF)
+                    {
+                        // Spread to adjacent party members.
+                        if (i != 0 && !(GetMonData(&party[i - 1], MON_DATA_POKERUS, 0) & 0xF0))
+                            SetMonData(&party[i - 1], MON_DATA_POKERUS, &curPokerus);
+                        if (i != (PARTY_SIZE - 1) && !(GetMonData(&party[i + 1], MON_DATA_POKERUS, 0) & 0xF0))
+                        {
+                            SetMonData(&party[i + 1], MON_DATA_POKERUS, &curPokerus);
+                            i++;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 static void SetMonExpWithMaxLevelCheck(struct Pokemon *mon, int species, u8 unused, u32 data)
@@ -5726,12 +6194,44 @@ u32 CanMonLearnTMHM(struct Pokemon *mon, u8 tm)
     }
 }
 
+u32 CanSpeciesLearnTMHM(u16 species, u8 tm)
+{
+    if (species == SPECIES_EGG)
+    {
+        return 0;
+    }
+    else if (tm < 32)
+    {
+        u32 mask = 1 << tm;
+        return sTMHMLearnsets[species][0] & mask;
+    }
+    else
+    {
+        u32 mask = 1 << (tm - 32);
+        return sTMHMLearnsets[species][1] & mask;
+    }
+}
+
+u16 GetPreEvolution(u16 species) {
+    int i, j;
+    for (i = 1; i < NUM_SPECIES; i++)
+    {
+        for (j = 0; j < EVOS_PER_MON; j++)
+        {
+            if (gEvolutionTable[i][j].targetSpecies == species)
+                return i;
+        }
+    }
+    return SPECIES_NONE;
+}
+
 u8 GetMoveRelearnerMoves(struct Pokemon *mon, u16 *moves)
 {
     u16 learnedMoves[MAX_MON_MOVES];
     u8 numMoves = 0;
     u16 species = GetMonData(mon, MON_DATA_SPECIES, NULL);
     u8 level = GetMonData(mon, MON_DATA_LEVEL, NULL);
+    u8 preEvLvl = (level > MAX_LEVEL_DIFF_PRE_EV) ? (level - MAX_LEVEL_DIFF_PRE_EV) : 1;
     int i, j, k;
 
     for (i = 0; i < MAX_MON_MOVES; i++)
@@ -5741,7 +6241,13 @@ u8 GetMoveRelearnerMoves(struct Pokemon *mon, u16 *moves)
     {
         u16 moveLevel;
 
-        if (gLevelUpLearnsets[species][i] == LEVEL_UP_END)
+        if (gLevelUpLearnsets[species][i] == LEVEL_UP_END) {
+            i = 0;
+            level = preEvLvl;
+            species = GetPreEvolution(species);
+        }
+
+        if (species == SPECIES_NONE)
             break;
 
         moveLevel = gLevelUpLearnsets[species][i] & LEVEL_UP_MOVE_LV;
@@ -5783,6 +6289,7 @@ u8 GetNumberOfRelearnableMoves(struct Pokemon *mon)
     u8 numMoves = 0;
     u16 species = GetMonData(mon, MON_DATA_SPECIES_OR_EGG, NULL);
     u8 level = GetMonData(mon, MON_DATA_LEVEL, NULL);
+    u8 preEvLvl = (level > MAX_LEVEL_DIFF_PRE_EV) ? (level - MAX_LEVEL_DIFF_PRE_EV) : 1;
     int i, j, k;
 
     if (species == SPECIES_EGG)
@@ -5795,7 +6302,13 @@ u8 GetNumberOfRelearnableMoves(struct Pokemon *mon)
     {
         u16 moveLevel;
 
-        if (gLevelUpLearnsets[species][i] == LEVEL_UP_END)
+        if (gLevelUpLearnsets[species][i] == LEVEL_UP_END) {
+            i = 0;
+            level = preEvLvl;
+            species = GetPreEvolution(species);
+        }
+
+        if (species == SPECIES_NONE)
             break;
 
         moveLevel = gLevelUpLearnsets[species][i] & LEVEL_UP_MOVE_LV;
@@ -5861,6 +6374,33 @@ static u16 GetBattleBGM(void)
             return MUS_VS_TRAINER;
         }
     }
+    else {
+        switch (GetMonData(&gEnemyParty[0], MON_DATA_SPECIES, NULL))
+        {
+        case SPECIES_GROUDON:
+        case SPECIES_KYOGRE:
+        case SPECIES_RAYQUAZA:
+        case SPECIES_DEOXYS:
+        case SPECIES_JIRACHI:
+            return MUS_VS_DEOXYS;
+        case SPECIES_REGICE:
+        case SPECIES_REGIROCK:
+        case SPECIES_REGISTEEL:
+        case SPECIES_ARTICUNO:
+        case SPECIES_ZAPDOS:
+        case SPECIES_MOLTRES:
+        case SPECIES_MEWTWO:
+        case SPECIES_MEW:
+        case SPECIES_CELEBI:
+            return MUS_VS_MEWTWO;
+        case SPECIES_LUGIA:
+        case SPECIES_HO_OH:
+        case SPECIES_RAIKOU:
+        case SPECIES_ENTEI:
+        case SPECIES_SUICUNE:
+            return MUS_VS_LEGEND;
+        }
+    }
     return MUS_VS_WILD;
 }
 
@@ -5922,16 +6462,16 @@ const struct CompressedSpritePalette *GetMonSpritePalStructFromOtIdPersonality(u
         return &gMonPaletteTable[species];
 }
 
-bool32 IsHMMove2(u16 move)
-{
-    int i = 0;
-    while (sHMMoves[i] != HM_MOVES_END)
-    {
-        if (sHMMoves[i++] == move)
-            return TRUE;
-    }
-    return FALSE;
-}
+//bool32 IsHMMove2(u16 move)
+//{
+//    int i = 0;
+//    while (sHMMoves[i] != HM_MOVES_END)
+//    {
+//        if (sHMMoves[i++] == move)
+//            return TRUE;
+//    }
+//    return FALSE;
+//}
 
 bool8 IsMonSpriteNotFlipped(u16 species)
 {
@@ -6017,22 +6557,62 @@ void SetMonPreventsSwitchingString(void)
     BattleStringExpandPlaceholders(gText_PkmnsXPreventsSwitching, gStringVar4);
 }
 
+static s32 GetWildMonTableIdInAlteringCave(u16 species)
+{
+    s32 i;
+    for (i = 0; i < (s32)ARRAY_COUNT(sAlteringCaveWildMonHeldItems); i++)
+        if (sAlteringCaveWildMonHeldItems[i].species == species)
+            return i;
+    return 0;
+}
+
 void SetWildMonHeldItem(void)
 {
     if (!(gBattleTypeFlags & (BATTLE_TYPE_POKEDUDE | BATTLE_TYPE_LEGENDARY | BATTLE_TYPE_TRAINER)))
     {
+        u16 var1 = 45;
+        u16 var2 = 95;
         u16 rnd = Random() % 100;
         u16 species = GetMonData(&gEnemyParty[0], MON_DATA_SPECIES, NULL);
-        if (gSpeciesInfo[species].itemCommon == gSpeciesInfo[species].itemRare)
+
+        if (!GetMonData(&gPlayerParty[0], MON_DATA_SANITY_IS_EGG, 0)
+            && GetMonAbility(&gPlayerParty[0]) == ABILITY_COMPOUND_EYES)
         {
-            // Both held items are the same, 100% chance to hold item   
-            SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &gSpeciesInfo[species].itemCommon);
-            return;
+            var1 = 20;
+            var2 = 80;
         }
 
-        if (rnd > 44)
+        if (gMapHeader.mapLayoutId == LAYOUT_SIX_ISLAND_ALTERING_CAVE)
         {
-            if (rnd <= 94)
+            s32 alteringCaveId = GetWildMonTableIdInAlteringCave(species);
+            if (alteringCaveId != 0)
+            {
+                if (rnd < var2)
+                    return;
+                SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &sAlteringCaveWildMonHeldItems[alteringCaveId].item);
+            }
+            else
+            {
+                if (rnd < var1)
+                    return;
+                if (rnd < var2)
+                    SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &gSpeciesInfo[species].itemCommon);
+                else
+                    SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &gSpeciesInfo[species].itemRare);
+            }
+        }
+        else
+        {
+            if (gSpeciesInfo[species].itemCommon == gSpeciesInfo[species].itemRare && gSpeciesInfo[species].itemCommon != 0)
+            {
+                // Both held items are the same, 100% chance to hold item   
+                SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &gSpeciesInfo[species].itemCommon);
+                return;
+            }
+
+            if (rnd < var1)
+                return;
+            if (rnd < var2)
                 SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &gSpeciesInfo[species].itemCommon);
             else
                 SetMonData(&gEnemyParty[0], MON_DATA_HELD_ITEM, &gSpeciesInfo[species].itemRare);
@@ -6086,101 +6666,101 @@ u16 FacilityClassToPicIndex(u16 facilityClass)
 }
 
 // If FALSE, should load this game's Deoxys form. If TRUE, should load normal Deoxys form
-bool8 ShouldIgnoreDeoxysForm(u8 caseId, u8 battlerId)
-{
-    switch (caseId)
-    {
-    case 0:
-    default:
-        return FALSE;
-    case DEOXYS_CHECK_BATTLE_SPRITE:
-        if (!(gBattleTypeFlags & BATTLE_TYPE_MULTI))
-            return FALSE;
-        if (!gMain.inBattle)
-            return FALSE;
-        if (gLinkPlayers[GetMultiplayerId()].id == battlerId)
-            return FALSE;
-        break;
-    case 2:
-        break;
-    case DEOXYS_CHECK_TRADE_MAIN:
-        if (!(gBattleTypeFlags & BATTLE_TYPE_MULTI))
-            return FALSE;
-        if (!gMain.inBattle)
-            return FALSE;
-        if (battlerId == 1 || battlerId == 4 || battlerId == 5)
-            return TRUE;
-        return FALSE;
-    case 4:
-        break;
-    case DEOXYS_CHECK_BATTLE_ANIM:
-        if (gBattleTypeFlags & BATTLE_TYPE_LINK)
-        {
-            if (!gMain.inBattle)
-                return FALSE;
-            if (gBattleTypeFlags & BATTLE_TYPE_MULTI)
-            {
-                if (gLinkPlayers[GetMultiplayerId()].id == battlerId)
-                    return FALSE;
-            }
-            else
-            {
-                if (GetBattlerSide(battlerId) == B_SIDE_PLAYER)
-                    return FALSE;
-            }
-        }
-        else
-        {
-            if (!gMain.inBattle)
-                return FALSE;
-            if (GetBattlerSide(battlerId) == B_SIDE_PLAYER)
-                return FALSE;
-        }
-        break;
-    }
+//bool8 ShouldIgnoreDeoxysForm(u8 caseId, u8 battlerId)
+//{
+//    switch (caseId)
+//    {
+//    case 0:
+//    default:
+//        return FALSE;
+//    case DEOXYS_CHECK_BATTLE_SPRITE:
+//        if (!(gBattleTypeFlags & BATTLE_TYPE_MULTI))
+//            return FALSE;
+//        if (!gMain.inBattle)
+//            return FALSE;
+//        if (gLinkPlayers[GetMultiplayerId()].id == battlerId)
+//            return FALSE;
+//        break;
+//    case 2:
+//        break;
+//    case DEOXYS_CHECK_TRADE_MAIN:
+//        if (!(gBattleTypeFlags & BATTLE_TYPE_MULTI))
+//            return FALSE;
+//        if (!gMain.inBattle)
+//            return FALSE;
+//        if (battlerId == 1 || battlerId == 4 || battlerId == 5)
+//            return TRUE;
+//        return FALSE;
+//    case 4:
+//        break;
+//    case DEOXYS_CHECK_BATTLE_ANIM:
+//        if (gBattleTypeFlags & BATTLE_TYPE_LINK)
+//        {
+//            if (!gMain.inBattle)
+//                return FALSE;
+//            if (gBattleTypeFlags & BATTLE_TYPE_MULTI)
+//            {
+//                if (gLinkPlayers[GetMultiplayerId()].id == battlerId)
+//                    return FALSE;
+//            }
+//            else
+//            {
+//                if (GetBattlerSide(battlerId) == B_SIDE_PLAYER)
+//                    return FALSE;
+//            }
+//        }
+//        else
+//        {
+//            if (!gMain.inBattle)
+//                return FALSE;
+//            if (GetBattlerSide(battlerId) == B_SIDE_PLAYER)
+//                return FALSE;
+//        }
+//        break;
+//    }
+//
+//    return TRUE;
+//}
 
-    return TRUE;
-}
+//static u16 GetDeoxysStat(struct Pokemon *mon, s32 statId)
+//{
+//    s32 ivVal, evVal;
+//    u16 statValue = 0;
+//    u8 nature;
+//
+//    if (gBattleTypeFlags & BATTLE_TYPE_LINK_IN_BATTLE || GetMonData(mon, MON_DATA_SPECIES, NULL) != SPECIES_DEOXYS)
+//        return 0;
+//
+//    ivVal = GetMonData(mon, MON_DATA_HP_IV + statId, NULL);
+//    evVal = GetMonData(mon, MON_DATA_HP_EV + statId, NULL);
+//    statValue = ((sDeoxysBaseStats[statId] * 2 + ivVal + evVal / 4) * mon->level) / 100 + 5;
+//    nature = GetNature(mon);
+//    statValue = ModifyStatByNature(nature, statValue, (u8)statId);
+//    return statValue;
+//}
 
-static u16 GetDeoxysStat(struct Pokemon *mon, s32 statId)
-{
-    s32 ivVal, evVal;
-    u16 statValue = 0;
-    u8 nature;
-
-    if (gBattleTypeFlags & BATTLE_TYPE_LINK_IN_BATTLE || GetMonData(mon, MON_DATA_SPECIES, NULL) != SPECIES_DEOXYS)
-        return 0;
-
-    ivVal = GetMonData(mon, MON_DATA_HP_IV + statId, NULL);
-    evVal = GetMonData(mon, MON_DATA_HP_EV + statId, NULL);
-    statValue = ((sDeoxysBaseStats[statId] * 2 + ivVal + evVal / 4) * mon->level) / 100 + 5;
-    nature = GetNature(mon);
-    statValue = ModifyStatByNature(nature, statValue, (u8)statId);
-    return statValue;
-}
-
-void SetDeoxysStats(void)
-{
-    s32 i, value;
-
-    for (i = 0; i < PARTY_SIZE; i++)
-    {
-        struct Pokemon *mon = &gPlayerParty[i];
-
-        if (GetMonData(mon, MON_DATA_SPECIES, NULL) != SPECIES_DEOXYS)
-            continue;
-        value = GetMonData(mon, MON_DATA_ATK, NULL);
-        SetMonData(mon, MON_DATA_ATK, &value);
-        value = GetMonData(mon, MON_DATA_DEF, NULL);
-        SetMonData(mon, MON_DATA_DEF, &value);
-        value = GetMonData(mon, MON_DATA_SPEED, NULL);
-        SetMonData(mon, MON_DATA_SPEED, &value);
-        value = GetMonData(mon, MON_DATA_SPATK, NULL);
-        SetMonData(mon, MON_DATA_SPATK, &value);
-        value = GetMonData(mon, MON_DATA_SPDEF, NULL);
-        SetMonData(mon, MON_DATA_SPDEF, &value);
-    }
-}
+//void SetDeoxysStats(void)
+//{
+//    s32 i, value;
+//
+//    for (i = 0; i < PARTY_SIZE; i++)
+//    {
+//        struct Pokemon *mon = &gPlayerParty[i];
+//
+//        if (GetMonData(mon, MON_DATA_SPECIES, NULL) != SPECIES_DEOXYS)
+//            continue;
+//        value = GetMonData(mon, MON_DATA_ATK, NULL);
+//        SetMonData(mon, MON_DATA_ATK, &value);
+//        value = GetMonData(mon, MON_DATA_DEF, NULL);
+//        SetMonData(mon, MON_DATA_DEF, &value);
+//        value = GetMonData(mon, MON_DATA_SPEED, NULL);
+//        SetMonData(mon, MON_DATA_SPEED, &value);
+//        value = GetMonData(mon, MON_DATA_SPATK, NULL);
+//        SetMonData(mon, MON_DATA_SPATK, &value);
+//        value = GetMonData(mon, MON_DATA_SPDEF, NULL);
+//        SetMonData(mon, MON_DATA_SPDEF, &value);
+//    }
+//}
 
 u16 GetUnionRoomTrainerPic(void)
 {

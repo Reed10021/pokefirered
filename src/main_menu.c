@@ -5,6 +5,7 @@
 #include "save.h"
 #include "event_data.h"
 #include "menu.h"
+#include "rtc.h"
 #include "link.h"
 #include "oak_speech.h"
 #include "overworld.h"
@@ -44,6 +45,8 @@ enum MainMenuWindow
 
 static bool32 MainMenuGpuInit(u8 a0);
 static void Task_SetWin0BldRegsAndCheckSaveFile(u8 taskId);
+static void Task_MainMenuCheckBattery(u8);
+static void Task_WaitForBatteryDryErrorWindow(u8);
 static void PrintSaveErrorStatus(u8 taskId, const u8 *str);
 static void Task_SaveErrorStatus_RunPrinterThenWaitButton(u8 taskId);
 static void Task_SetWin0BldRegsNoSaveFileCheck(u8 taskId);
@@ -241,7 +244,7 @@ static void Task_SetWin0BldRegsAndCheckSaveFile(u8 taskId)
             {
                 gTasks[taskId].tMenuType = MAIN_MENU_CONTINUE;
             }
-            gTasks[taskId].func = Task_SetWin0BldRegsNoSaveFileCheck;
+            gTasks[taskId].func = Task_MainMenuCheckBattery;
             break;
         case SAVE_STATUS_INVALID:
             SetStdFrame0OnBg(0);
@@ -272,6 +275,67 @@ static void Task_SetWin0BldRegsAndCheckSaveFile(u8 taskId)
             gTasks[taskId].tMenuType = MAIN_MENU_NEWGAME;
             PrintSaveErrorStatus(taskId, gText_1MSubCircuitBoardNotInstalled);
             break;
+        }
+    }
+}
+
+static void Task_MainMenuCheckBattery(u8 taskId)
+{
+    if (!gPaletteFade.active)
+    {
+        SetGpuReg(REG_OFFSET_WIN0H, 0);
+        SetGpuReg(REG_OFFSET_WIN0V, 0);
+        SetGpuReg(REG_OFFSET_WININ, 0x0001);
+        SetGpuReg(REG_OFFSET_WINOUT, 0x0021);
+        SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_TGT1_BG1 | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG3 | BLDCNT_TGT1_OBJ | BLDCNT_TGT1_BD | BLDCNT_EFFECT_DARKEN);
+        SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(0, 0));
+        SetGpuReg(REG_OFFSET_BLDY, 7);
+
+        if (!(RtcGetErrorStatus() & RTC_ERR_FLAG_MASK))
+        {
+            if (gTasks[taskId].tMenuType == MAIN_MENU_NEWGAME) {
+                LoadUserFrameToBg(0);
+                gTasks[taskId].tMenuType = MAIN_MENU_NEWGAME;
+                gTasks[taskId].func = Task_SetWin0BldRegsNoSaveFileCheck;
+            }
+            else {
+                gTasks[taskId].func = Task_SetWin0BldRegsNoSaveFileCheck;
+            }
+        }
+        else
+        {
+            SetStdFrame0OnBg(0);
+            PrintSaveErrorStatus(taskId, gText_BatteryRunDry);
+            gTasks[taskId].func = Task_WaitForBatteryDryErrorWindow;
+        }
+    }
+}
+
+static void Task_WaitForBatteryDryErrorWindow(u8 taskId)
+{
+    if (!gPaletteFade.active)
+    {
+        RunTextPrinters();
+        if (gTasks[taskId].tUnused8 == 3)
+        {
+            if (!IsTextPrinterActive(MAIN_MENU_WINDOW_ERROR))
+            {
+                gTasks[taskId].func = Task_SetWin0BldRegsNoSaveFileCheck;
+            }
+        }
+        else
+        {
+            if (!IsTextPrinterActive(MAIN_MENU_WINDOW_ERROR) && JOY_NEW(A_BUTTON))
+            {
+                ClearWindowTilemap(MAIN_MENU_WINDOW_ERROR);
+                MainMenu_EraseWindow(&sWindowTemplate[MAIN_MENU_WINDOW_ERROR]);
+                LoadUserFrameToBg(0);
+
+                if (gTasks[taskId].tMenuType == MAIN_MENU_NEWGAME)
+                    gTasks[taskId].func = Task_SetWin0BldRegsNoSaveFileCheck;
+                else
+                    gTasks[taskId].func = Task_PrintMainMenuText;
+            }
         }
     }
 }
@@ -634,7 +698,7 @@ static void PrintPlayTime(void)
     u8 *ptr;
 
     AddTextPrinterParameterized3(MAIN_MENU_WINDOW_CONTINUE, FONT_NORMAL, 2, 34, sTextColor2, -1, gText_Time);
-    ptr = ConvertIntToDecimalStringN(strbuf, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 3);
+    ptr = ConvertIntToDecimalStringN(strbuf, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 5);
     *ptr++ = CHAR_COLON;
     ConvertIntToDecimalStringN(ptr, gSaveBlock2Ptr->playTimeMinutes, STR_CONV_MODE_LEADING_ZEROS, 2);
     AddTextPrinterParameterized3(MAIN_MENU_WINDOW_CONTINUE, FONT_NORMAL, 62, 34, sTextColor2, -1, strbuf);
@@ -643,17 +707,28 @@ static void PrintPlayTime(void)
 static void PrintDexCount(void)
 {
     u8 strbuf[30];
-    u8 *ptr;
-    u16 dexcount;
+    u8* string = strbuf;
     if (FlagGet(FLAG_SYS_POKEDEX_GET) == TRUE)
     {
         if (IsNationalPokedexEnabled())
-            dexcount = GetNationalPokedexCount(FLAG_GET_CAUGHT);
+        {
+            string = ConvertIntToDecimalStringN(string, GetNationalPokedexCount(FLAG_GET_CAUGHT), STR_CONV_MODE_LEFT_ALIGN, 3);
+            *(string++) = CHAR_SPACE;
+            *(string++) = CHAR_SLASH;
+            *(string++) = CHAR_SPACE;
+            string = ConvertIntToDecimalStringN(string, GetNationalPokedexCount(FLAG_GET_SEEN), STR_CONV_MODE_LEFT_ALIGN, 3);
+        }
         else
-            dexcount = GetKantoPokedexCount(FLAG_GET_CAUGHT);
+        {
+            string = ConvertIntToDecimalStringN(string, GetKantoPokedexCount(FLAG_GET_CAUGHT), STR_CONV_MODE_LEFT_ALIGN, 3);
+            *(string++) = CHAR_SPACE;
+            *(string++) = CHAR_SLASH;
+            *(string++) = CHAR_SPACE;
+            string = ConvertIntToDecimalStringN(string, GetKantoPokedexCount(FLAG_GET_SEEN), STR_CONV_MODE_LEFT_ALIGN, 3);
+        }
         AddTextPrinterParameterized3(MAIN_MENU_WINDOW_CONTINUE, FONT_NORMAL, 2, 50, sTextColor2, -1, gText_Pokedex);
-        ptr = ConvertIntToDecimalStringN(strbuf, dexcount, STR_CONV_MODE_LEFT_ALIGN, 3);
-        StringAppend(ptr, gTextJPDummy_Hiki);
+        //ptr = ConvertIntToDecimalStringN(strbuf, dexcount, STR_CONV_MODE_LEFT_ALIGN, 3);
+        StringAppend(string, gTextJPDummy_Hiki);
         AddTextPrinterParameterized3(MAIN_MENU_WINDOW_CONTINUE, FONT_NORMAL, 62, 50, sTextColor2, -1, strbuf);
     }
 }

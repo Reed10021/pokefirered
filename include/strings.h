@@ -80,13 +80,12 @@ extern const u8 gText_ApostropheSBase[];
 extern const u8 gText_NoRegistry[];
 extern const u8 gText_OkayToDeleteFromRegistry[];
 extern const u8 gText_RegisteredDataDeleted[];
-extern const u8 gText_Confirm3[];
-extern const u8 gText_Cancel4[];
-extern const u8 gText_IsThisTheCorrectTime[];
 extern const u8 gText_PkmnFainted3[];
 extern const u8 gText_Coins[];
 extern const u8 gText_EggNickname[];
 extern const u8 gText_MenuPokemon[];
+extern const u8 gText_ShinyRoamer[];
+extern const u8 gText_Roamer[];
 
 extern const u8 gOtherText_Use[];
 extern const u8 gOtherText_Toss[];
@@ -221,6 +220,7 @@ extern const u8 gText_BattleSwitchWhich[];
 extern const u8 gText_MoveInterfaceDynamicColors[];
 extern const u8 gText_MoveInterfacePP[];
 extern const u8 gText_MoveInterfaceType[];
+extern const u8 gText_MoveInterfaceTypeEffectiveness[];
 extern const u8 gText_LinkStandby[];
 extern const u8 gText_BattleMenu[];
 extern const u8 gText_WhatWillPkmnDo[];
@@ -336,6 +336,7 @@ extern const u8 gText_BagFullCouldNotRemoveItem[];
 extern const u8 gText_PkmnCantParticipate[];
 extern const u8 gText_CancelParticipation[];
 extern const u8 gText_OakThisIsListOfPokemon[];
+extern const u8 gMenuText_Confirm[];
 extern const u8 gText_PartyMenu_OK[];
 extern const u8 gText_MaleSymbol[];
 extern const u8 gText_FemaleSymbol[];
@@ -368,6 +369,9 @@ extern const u8 gText_ItemEffect_Speed[];
 extern const u8 gText_ItemEffect_SpAtk[];
 extern const u8 gText_ItemEffect_SpDef[];
 extern const u8 gText_PkmnBaseVar2StatIncreased[];
+extern const u8 gText_PkmnFriendlyBaseVar2Fell[];
+extern const u8 gText_PkmnFriendlyBaseVar2CantFall[];
+extern const u8 gText_PkmnAdoresBaseVar2Fell[];
 extern const u8 gText_MovesPPIncreased[];
 extern const u8 gText_PPWasRestored[];
 extern const u8 gText_PkmnHPRestoredByVar2[];
@@ -389,6 +393,8 @@ extern const u8 gText_PkmnAlreadyInBattle[];
 extern const u8 gText_EggCantBattle[];
 extern const u8 gText_PkmnAlreadySelected[];
 extern const u8 gText_PkmnCantSwitchOut[];
+
+extern const u8 gText_Nickname[];
 
 // credits
 extern const u8 gString_Dummy[];
@@ -503,6 +509,7 @@ extern const u8 gText_ABtnRegistrationCounter[];
 extern const u8 gText_SaveFileCorrupted[];
 extern const u8 gText_SaveFileHasBeenDeleted[];
 extern const u8 gText_1MSubCircuitBoardNotInstalled[];
+extern const u8 gText_BatteryRunDry[];
 extern const u8 gText_NewGame[];
 extern const u8 gText_Continue[];
 extern const u8 gText_MysteryGift[];
@@ -516,6 +523,11 @@ extern const u8 gTextJPDummy_Hiki[];
 extern const u8 gText_Badges[];
 extern const u8 gTextJPDummy_Ko[];
 extern const u8 gText_Register[];
+
+// wallclock
+extern const u8 gText_Confirm3[];
+extern const u8 gText_Cancel4[];
+extern const u8 gText_IsThisTheCorrectTime[];
 
 // mystery_gift_menu
 extern const u8 gText_PickOKExit[];
@@ -622,10 +634,24 @@ extern const u8 gText_MessageWillBeLost[];
 extern const u8 gText_BagIsFull[];
 extern const u8 gText_MailReturnedToBagMessageErased[];
 
+// reset rtc screen texts
+extern const u8 gText_Day[];
+extern const u8 gText_Colon3[];
+extern const u8 gText_Confirm2[];
+extern const u8 gText_PresentTime[];
+extern const u8 gText_PreviousTime[];
+extern const u8 gText_ResetRTCConfirmCancel[];
+extern const u8 gText_NoSaveFileCantSetTime[];
+extern const u8 gText_PleaseResetTime[];
+extern const u8 gText_ClockHasBeenReset[];
+extern const u8 gText_SaveCompleted[];
+extern const u8 gText_SaveFailed[];
+
 // start_menu
 extern const u8 gText_MenuPokedex[];
 extern const u8 gText_MenuBag[];
 extern const u8 gText_MenuPlayer[];
+extern const u8 gText_MenuPC[];
 extern const u8 gText_MenuSave[];
 extern const u8 gText_MenuOption[];
 extern const u8 gText_MenuExit[];
@@ -639,13 +665,14 @@ extern const u8 gStartMenuDesc_Option[];
 extern const u8 gStartMenuDesc_Exit[];
 extern const u8 gStartMenuDesc_Retire[];
 extern const u8 gStartMenuDesc_Player[];
+extern const u8 gStartMenuDesc_PC[];
 extern const u8 gText_SaveError_PleaseExchangeBackupMemory[];
 extern const u8 gText_SavingDontTurnOffThePower2[];
 extern const u8 gSaveStatName_Player[];
 extern const u8 gSaveStatName_Badges[];
 extern const u8 gSaveStatName_Pokedex[];
 extern const u8 gSaveStatName_Time[];
-
+extern const u8 gSaveStatName_ClockTime[];
 // mail
 extern const u8 gText_From[];
 
@@ -730,6 +757,7 @@ extern const u8 gText_SodaPop_300[];
 extern const u8 gText_Lemonade_350[];
 extern const u8 gText_50Coins_1000[];
 extern const u8 gText_500Coins_10000[];
+extern const u8 gText_10000YenAndPrice[];
 extern const u8 gText_Excellent[];
 extern const u8 gText_NotSoBad[];
 extern const u8 gText_RedShard[];
@@ -743,6 +771,8 @@ extern const u8 gText_Tm23_3500Coins[];
 extern const u8 gText_Tm24_4000Coins[];
 extern const u8 gText_Tm30_4500Coins[];
 extern const u8 gText_Tm35_4000Coins[];
+extern const u8 gText_Eevee_4500Coins[];
+extern const u8 gText_MrMime_8750Coins[];
 extern const u8 gText_1F_2[];
 extern const u8 gText_2F_2[];
 extern const u8 gText_3F_2[];
@@ -766,7 +796,7 @@ extern const u8 gText_Abra_180Coins[];
 extern const u8 gText_Clefairy_500Coins[];
 extern const u8 gText_Dratini_2800Coins[];
 extern const u8 gText_Scyther_5500Coins[];
-extern const u8 gText_Porygon_9999Coins[];
+extern const u8 gText_Porygon_9000Coins[];
 extern const u8 gText_Abra_120Coins[];
 extern const u8 gText_Clefairy_750Coins[];
 extern const u8 gText_Pinsir_2500Coins[];
@@ -936,6 +966,10 @@ extern const u8 gText_ButtonTypeHelp[];
 extern const u8 gText_ButtonTypeLR[];
 extern const u8 gText_ButtonTypeLEqualsA[];
 extern const u8 gText_Option[];
+extern const u8 gText_SmallDot[];
+extern const u8 gText_LargeDot[];
+extern const u8 gText_PageNav[];
+extern const u8 gText_Flashback[];
 extern const u8 gText_FrameType[];
 extern const u8 gTextJP_Type[];
 extern const u8 gText_PickSwitchCancel[];
@@ -950,6 +984,10 @@ extern const u8 gText_PkmnStoppedEvolving[];
 extern const u8 gText_ShopBuy[];
 extern const u8 gText_ShopSell[];
 extern const u8 gText_ShopQuit[];
+extern const u8 gText_SoldOut[];
+extern const u8 gText_SoldOut2[];
+extern const u8 gText_ThrowInPremierBall[];
+extern const u8 gText_ThrowInPremierBalls[];
 extern const u8 gText_AnythingElseICanHelp[];
 extern const u8 gText_QuitShopping[];
 extern const u8 gText_PokedollarVar1[];
@@ -957,8 +995,10 @@ extern const u8 gText_YouDontHaveMoney[];
 extern const u8 gText_Var1CertainlyHowMany[];
 extern const u8 gText_InBagVar1[];
 extern const u8 gText_Var1AndYouWantedVar2[];
+extern const u8 gText_YouWantedVar1ThatllBeVar2[];
 extern const u8 gText_HereYouGoThankYou[];
 extern const u8 gText_NoMoreRoomForThis[];
+extern const u8 gText_YouAlreadyHaveThis[];
 
 // pokedex_screen
 extern const u8 gText_PokedexTableOfContents[];
@@ -999,6 +1039,7 @@ extern const u8 gText_HT[];
 extern const u8 gText_WT[];
 extern const u8 gText_Lbs[];
 extern const u8 gText_Cry[];
+extern const u8 gText_CryForm[];
 extern const u8 gText_NextDataCancel[];
 extern const u8 gText_Next[];
 extern const u8 gText_CancelPreviousData[];
@@ -1529,7 +1570,12 @@ extern const u8 gText_PokeSum_NextLv[];
 extern const u8 gText_PokeSum_PageName_PokemonInfo[];
 extern const u8 gText_PokeSum_Controls_PageCancel[];
 extern const u8 gText_PokeSum_Controls_Cancel[];
+extern const u8 gText_PokeSum_Controls_Ivs[];
+extern const u8 gText_PokeSum_Controls_Evs[];
+extern const u8 gText_PokeSum_Controls_Stats[];
 extern const u8 gText_PokeSum_PageName_PokemonSkills[];
+extern const u8 gText_PokeSum_PageName_PokemonIvs[];
+extern const u8 gText_PokeSum_PageName_PokemonEvs[];
 extern const u8 gText_PokeSum_Controls_Page[];
 extern const u8 gText_PokeSum_Controls_PickDelete[];
 extern const u8 gText_PokeSum_HmMovesCantBeForgotten[];
@@ -1544,5 +1590,7 @@ extern const u8 gText_PokeSum_EggOrigin_Trade[];
 extern const u8 gText_PokeSum_EggOrigin_NicePlace[];
 extern const u8 gText_PokeSum_EggOrigin_Spa[];
 extern const u8 gText_PokeSum_EggOrigin_Trade[];
+
+extern const u8 gText_Moves_Menu[];
 
 #endif //GUARD_STRINGS_H

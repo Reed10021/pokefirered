@@ -168,10 +168,12 @@ static const struct MenuAction sMultichoiceList_CeladonVendingMachine[] = {
 
 static const struct MenuAction sMultichoiceList_GameCornerTMPrizes[] = {
     { gText_Tm13_4000Coins },
-    { gText_Tm23_3500Coins },
+    //{ gText_Tm23_3500Coins },
     { gText_Tm24_4000Coins },
-    { gText_Tm30_4500Coins },
+    //{ gText_Tm30_4500Coins },
     { gText_Tm35_4000Coins },
+    { gText_Eevee_4500Coins },
+    { gText_MrMime_8750Coins },
     { gText_NoThanks_2 }
 };
 
@@ -185,8 +187,9 @@ static const struct MenuAction sMultichoiceList_GameCornerBattleItemPrizes[] = {
 };
 
 static const struct MenuAction sMultichoiceList_GameCornerCoinPurchaseCounter[] = {
-    { gText_50Coins_1000 },
     { gText_500Coins_10000 },
+    { gText_50Coins_1000 },
+    { gText_10000YenAndPrice },
     { gOtherText_Exit }
 };
 
@@ -320,7 +323,7 @@ static const struct MenuAction sMultichoiceList_GameCornerPokemonPrizes[] = {
     { gText_Clefairy_500Coins },
     { gText_Dratini_2800Coins },
     { gText_Scyther_5500Coins },
-    { gText_Porygon_9999Coins },
+    { gText_Porygon_9000Coins },
 #elif defined(LEAFGREEN)
     { gText_Abra_120Coins },
     { gText_Clefairy_750Coins },

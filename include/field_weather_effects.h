@@ -1,6 +1,8 @@
 #ifndef GUARD_FIELD_WEATHER_EFFECTS_H
 #define GUARD_FIELD_WEATHER_EFFECTS_H
 
+extern u8 gCurrentAbnormalWeather;
+
 bool8 Ash_Finish(void);
 bool8 Bubbles_Finish(void);
 bool8 Clouds_Finish(void);
@@ -51,5 +53,7 @@ void Thunderstorm_InitVars(void);
 void Thunderstorm_InitAll(void);
 void Downpour_InitVars(void);
 void Downpour_InitAll(void);
+void Task_DoAbnormalWeather(u8 taskId);
+void CreateAbnormalWeatherTask(void);
 
 #endif //GUARD_FIELD_WEATHER_EFFECTS_H

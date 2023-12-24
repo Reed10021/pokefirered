@@ -12,6 +12,27 @@ VermilionCity_Text_SSAnneHasDepartedForYear::
     .string "She'll be back in VERMILION about\n"
     .string "this time next year.$"
 
+VermilionCity_Text_HavePokemonWillYouTakeIt:
+	.string "Hmm. I have something to ask of you\n"
+	.string "TRAINER. I have a POKéMON here,\l"
+	.string "but it dislikes my lifestyle.\p"
+    .string "I'm much too old to go on adventures.\n"
+	.string "Will you take this POKéMON for me?$"
+
+VermilionCity_Text_AsYouWishThen:
+	.string "If you have a change of heart and\n"
+	.string "want to take this POKéMON on\l"
+    .string "adventures, I will be here.$"
+
+VermilionCity_Text_ReceivedCharmander:
+	.string "{PLAYER} received a Charmander!$"
+
+VermilionCity_Text_ReceivedBulbasaur:
+	.string "{PLAYER} received a Bulbasaur!$"
+
+VermilionCity_Text_ReceivedSquirtle:
+	.string "{PLAYER} received a Squirtle!$"
+
 VermilionCity_Text_BuildingOnThisLand::
     .string "I'm putting up a building on this\n"
     .string "plot of land. I own it all.\p"

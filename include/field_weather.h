@@ -158,6 +158,7 @@ void WeatherShiftGammaIfPalStateIdle(s8 gammaIndex);
 void WeatherBeginGammaFade(u8 gammaIndex, u8 gammaTargetIndex, u8 gammaStepDelay);
 void ApplyWeatherGammaShiftToPal(u8 paletteIndex);
 void StartWeather(void);
+void UpdateWeatherPerDay(u16 days);
 void ResumePausedWeather(void);
 void FadeSelectedPals(u8 mode, s8 delay, u32 selectedPalettes);
 

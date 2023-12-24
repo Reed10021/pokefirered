@@ -12,6 +12,7 @@
 #include "script_pokemon_util.h"
 #include "strings.h"
 #include "string_util.h"
+#include "roamer.h"
 #include "event_data.h"
 #include "event_object_movement.h"
 #include "metatile_behavior.h"
@@ -21,6 +22,7 @@
 #include "field_control_avatar.h"
 #include "field_player_avatar.h"
 #include "field_screen_effect.h"
+#include "field_specials.h"
 #include "field_message_box.h"
 #include "vs_seeker.h"
 #include "battle.h"
@@ -69,6 +71,10 @@ static bool32 IsPlayerDefeated(u32 battleOutcome);
 static void CB2_EndTrainerBattle(void);
 static const u8 *GetIntroSpeechOfApproachingTrainer(void);
 static const u8 *GetTrainerCantBattleSpeech(void);
+
+extern const u8 ChainNumber[];
+extern const u8 DeleteChain[];
+extern const u8 RoamerTextScript[];
 
 static EWRAM_DATA u16 sTrainerBattleMode = 0;
 EWRAM_DATA u16 gTrainerBattleOpponent_A = 0;
@@ -366,10 +372,8 @@ void StartLegendaryBattle(void)
     case SPECIES_ZAPDOS:
     case SPECIES_HO_OH:
     case SPECIES_LUGIA:
-        CreateBattleStartTask(B_TRANSITION_BLUR, MUS_VS_LEGEND);
-        break;
     default:
-        CreateBattleStartTask(B_TRANSITION_BLUR, MUS_RS_VS_TRAINER);
+        CreateBattleStartTask(B_TRANSITION_BLUR, MUS_VS_LEGEND);
         break;
     }
     IncrementGameStat(GAME_STAT_TOTAL_BATTLES);
@@ -418,16 +422,142 @@ static void StartPokedudeBattle(void)
     CreateBattleStartTask(GetWildBattleTransition(), 0);
 }
 
+//static void CB2_EndWildBattle(void)
+//{
+//    CpuFill16(0, (void *)BG_PLTT, BG_PLTT_SIZE);
+//    ResetOamRange(0, 128);
+//    if (IsPlayerDefeated(gBattleOutcome) == TRUE)
+//    {
+//        SetMainCallback2(CB2_WhiteOut);
+//    }
+//    else
+//    {
+//        SetMainCallback2(CB2_ReturnToField);
+//        gFieldCallback = FieldCB_SafariZoneRanOutOfBalls;
+//    }
+//}
+
+
 static void CB2_EndWildBattle(void)
 {
-    CpuFill16(0, (void *)BG_PLTT, BG_PLTT_SIZE);
+    u16 species;
+    u16 ptr;
+    u8 nickname[POKEMON_NAME_LENGTH + 1];
+    u16 lastPokemonFound;
+    u16 chainCount = VarGet(VAR_CHAIN);
+    species = GetMonData(&gEnemyParty[0], MON_DATA_SPECIES);
+    CpuFill16(0, (void*)(BG_PLTT), BG_PLTT_SIZE);
     ResetOamRange(0, 128);
     if (IsPlayerDefeated(gBattleOutcome) == TRUE)
     {
+        // If we had a chain and the species was correct but we died.
+        if (chainCount != 0 && species == VarGet(VAR_SPECIESCHAINED))
+        {
+            if (chainCount >= 3)
+            {
+                u8 numDigits = CountDigits(chainCount);
+                ConvertIntToDecimalStringN(gStringVar1, chainCount, STR_CONV_MODE_LEFT_ALIGN, numDigits);
+                GetSpeciesName(gStringVar2, VarGet(VAR_SPECIESCHAINED));
+                ScriptContext_SetupScript(DeleteChain);
+            }
+            VarSet(VAR_CHAIN, 0);
+            VarSet(VAR_SPECIESCHAINED, 0);
+        }
         SetMainCallback2(CB2_WhiteOut);
     }
     else
     {
+        if (gBattleOutcome == B_OUTCOME_WON || gBattleOutcome == B_OUTCOME_CAUGHT || gBattleOutcome == B_OUTCOME_PLAYER_TELEPORTED || gBattleOutcome == B_OUTCOME_MON_TELEPORTED || gBattleOutcome == B_OUTCOME_MON_FLED)
+        {
+            // Handle special roamer case
+            if (gBattleTypeFlags & BATTLE_TYPE_ROAMER)
+            {
+                // If we caught or defeated the roamer
+                if (gBattleOutcome == B_OUTCOME_CAUGHT || gBattleOutcome == B_OUTCOME_WON)
+                {
+                    // Handle chain stuff for roamer, that way player can chain roamer if needed.
+                    if (species != VarGet(VAR_SPECIESCHAINED))
+                    {
+                        if (chainCount >= 3)
+                        {
+                            u8 numDigits = CountDigits(chainCount);
+                            ConvertIntToDecimalStringN(gStringVar1, chainCount, STR_CONV_MODE_LEFT_ALIGN, numDigits);
+                            GetSpeciesName(gStringVar2, VarGet(VAR_SPECIESCHAINED));
+                            gSpecialVar_0x8003 = 10; // set flag to show chain break text
+                        }
+
+                        VarSet(VAR_SPECIESCHAINED, species);
+                        if (chainCount != 0)
+                            VarSet(VAR_CHAIN, 1); // Already defeated one, so set to one.
+                    }
+                    else
+                    {
+                        if(chainCount != 0xFFFF)
+                            VarSet(VAR_CHAIN, chainCount + 1); // We're already chaining, so increment by one.
+                        GetSpeciesName(gStringVar2, VarGet(VAR_SPECIESCHAINED));
+                    }
+                    
+                    // If roamer is still active, show shiny/not shiny text.
+                    if (IsRoamerActive())
+                    {
+                        ScriptContext_SetupScript(RoamerTextScript);
+                    }
+                }
+            }
+            // If not a roamer, handle normal chain stuff
+            else
+            {
+                // if we have a species, the species wasn't correct, and the chain is not zero, yeet.
+                if (species != VarGet(VAR_SPECIESCHAINED) && chainCount != 0)
+                {
+                    // If the chain was 3, show textbox showing you messed up.
+                    if (chainCount >= 3)
+                    {
+                        u8 numDigits = CountDigits(chainCount);
+                        ConvertIntToDecimalStringN(gStringVar1, chainCount, STR_CONV_MODE_LEFT_ALIGN, numDigits);
+                        GetSpeciesName(gStringVar2, VarGet(VAR_SPECIESCHAINED));
+                        ScriptContext_SetupScript(DeleteChain);
+                        // Cleanup
+                        VarSet(VAR_CHAIN, 0);
+                        VarSet(VAR_SPECIESCHAINED, 0);
+                    }
+                    else // if the chain wasn't +3, then act like we've started chaining this new species and are incrementing the counter.
+                    {
+                        VarSet(VAR_SPECIESCHAINED, species);
+                        VarSet(VAR_CHAIN, 1);
+                    }
+                }
+                else
+                {
+                    // if no chain, start chaining
+                    if (VarGet(VAR_SPECIESCHAINED) == 0)
+                        VarSet(VAR_SPECIESCHAINED, species);
+                    // if chain, increment chain and maybe show text
+                    if (species == VarGet(VAR_SPECIESCHAINED))
+                    {
+                        GetSpeciesName(gStringVar2, species);
+                        ScriptContext_SetupScript(ChainNumber);
+                    }
+                }
+            }
+        }
+        else // Else we ran
+        {
+            // If we had a chain and the species was correct but we ran from it.
+            if (chainCount != 0 && species == VarGet(VAR_SPECIESCHAINED))
+            {
+                if (chainCount >= 3)
+                {
+                    u8 numDigits = CountDigits(chainCount);
+                    ConvertIntToDecimalStringN(gStringVar1, chainCount, STR_CONV_MODE_LEFT_ALIGN, numDigits);
+                    GetSpeciesName(gStringVar2, VarGet(VAR_SPECIESCHAINED));
+                    ScriptContext_SetupScript(DeleteChain);
+                }
+                VarSet(VAR_CHAIN, 0);
+                VarSet(VAR_SPECIESCHAINED, 0);
+            }
+        }
+
         SetMainCallback2(CB2_ReturnToField);
         gFieldCallback = FieldCB_SafariZoneRanOutOfBalls;
     }

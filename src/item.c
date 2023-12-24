@@ -6,6 +6,7 @@
 #include "item_use.h"
 #include "load_save.h"
 #include "quest_log.h"
+#include "item_menu.h"
 #include "strings.h"
 #include "constants/hold_effects.h"
 #include "constants/items.h"
@@ -128,12 +129,10 @@ bool8 CheckBagHasItem(u16 itemId, u16 count)
             quantity = GetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity);
             if (quantity >= count)
                 return TRUE;
-                // RS and Emerald check whether there is enough of the
-                // item across all stacks.
-                // For whatever reason, FR/LG assume there's only one
-                // stack of the item.
-            else
-                return FALSE;
+            count -= quantity;
+            // Does this item slot and all previous slots contain enough of the item?
+            if (count == 0)
+                return TRUE;
         }
     }
     return FALSE;
@@ -166,36 +165,55 @@ bool8 HasAtLeastOneBerry(void)
 
 bool8 CheckBagHasSpace(u16 itemId, u16 count)
 {
-    u8 i;
-    u8 pocket;
+    u8 i, pocket;
+    u16 slotCapacity = 999, ownedCount;
 
     if (ItemId_GetPocket(itemId) == 0)
         return FALSE;
 
     pocket = ItemId_GetPocket(itemId) - 1;
-    // Check for item slots that contain the item
+
+    // Check space in any existing item slots that already contain this item
     for (i = 0; i < gBagPockets[pocket].capacity; i++)
     {
         if (gBagPockets[pocket].itemSlots[i].itemId == itemId)
         {
-            u16 quantity;
-            // Does this stack have room for more??
-            quantity = GetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity);
-            if (quantity + count <= 999)
+            ownedCount = GetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity);
+            if (ownedCount + count <= slotCapacity)
                 return TRUE;
-            // RS and Emerald check whether there is enough of the
-            // item across all stacks.
-            // For whatever reason, FR/LG assume there's only one
-            // stack of the item.
-            else
+            if (pocket == POCKET_TM_CASE - 1 || pocket == POCKET_BERRY_POUCH - 1)
                 return FALSE;
+            count -= (slotCapacity - ownedCount);
+            if (count == 0)
+                break; //Should just be "return TRUE", since setting count to 0 means all the remaining checks until return will be false anyway, but that doesn't match
         }
     }
 
-    if (BagPocketGetFirstEmptySlot(pocket) != -1)
-        return TRUE;
+    // Check space in empty item slots
+    if (count > 0) //if (count !=0) also works here; both match
+    {
+        for (i = 0; i < gBagPockets[pocket].capacity; i++)
+        {
+            if (gBagPockets[pocket].itemSlots[i].itemId == 0)
+            {
+                if (count > slotCapacity)
+                {
+                    if (pocket == POCKET_TM_CASE - 1 || pocket == POCKET_BERRY_POUCH - 1)
+                        return FALSE;
+                    count -= slotCapacity;
+                }
+                else
+                {
+                    count = 0; //Should just be "return TRUE", since setting count to 0 means all the remaining checks until return will be false anyway, but that doesn't match
+                    break;
+                }
+            }
+        }
+        if (count > 0)    //if (count !=0) also works here; both match
+            return FALSE; // No more item slots. The bag is full
+    }
 
-    return FALSE;
+    return TRUE;
 }
 
 bool8 AddBagItem(u16 itemId, u16 count)
@@ -208,27 +226,6 @@ bool8 AddBagItem(u16 itemId, u16 count)
         return FALSE;
 
     pocket = ItemId_GetPocket(itemId) - 1;
-    for (i = 0; i < gBagPockets[pocket].capacity; i++)
-    {
-        if (gBagPockets[pocket].itemSlots[i].itemId == itemId)
-        {
-            u16 quantity;
-            // Does this stack have room for more??
-            quantity = GetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity);
-            if (quantity + count <= 999)
-            {
-                quantity += count;
-                SetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity, quantity);
-                return TRUE;
-            }
-            // RS and Emerald check whether there is enough of the
-            // item across all stacks.
-            // For whatever reason, FR/LG assume there's only one
-            // stack of the item.
-            else
-                return FALSE;
-        }
-    }
 
     if (pocket == POCKET_TM_CASE - 1 && !CheckBagHasItem(ITEM_TM_CASE, 1))
     {
@@ -238,8 +235,7 @@ bool8 AddBagItem(u16 itemId, u16 count)
         gBagPockets[POCKET_KEY_ITEMS - 1].itemSlots[idx].itemId = ITEM_TM_CASE;
         SetBagItemQuantity(&gBagPockets[POCKET_KEY_ITEMS - 1].itemSlots[idx].quantity, 1);
     }
-
-    if (pocket == POCKET_BERRY_POUCH - 1 && !CheckBagHasItem(ITEM_BERRY_POUCH, 1))
+    else if (pocket == POCKET_BERRY_POUCH - 1 && !CheckBagHasItem(ITEM_BERRY_POUCH, 1))
     {
         idx = BagPocketGetFirstEmptySlot(POCKET_KEY_ITEMS - 1);
         if (idx == -1)
@@ -248,53 +244,167 @@ bool8 AddBagItem(u16 itemId, u16 count)
         SetBagItemQuantity(&gBagPockets[POCKET_KEY_ITEMS - 1].itemSlots[idx].quantity, 1);
         FlagSet(FLAG_SYS_GOT_BERRY_POUCH);
     }
-
-    if (itemId == ITEM_BERRY_POUCH)
+    else if (itemId == ITEM_BERRY_POUCH)
         FlagSet(FLAG_SYS_GOT_BERRY_POUCH);
 
-    idx = BagPocketGetFirstEmptySlot(pocket);
-    if (idx == -1)
-        return FALSE;
+    {
+        struct BagPocket* itemPocket = &gBagPockets[pocket];
+        struct ItemSlot* newItems = AllocZeroed(itemPocket->capacity * sizeof(struct ItemSlot));
+        u16 slotCapacity = 999;
+        u16 ownedCount;
+        memcpy(newItems, itemPocket->itemSlots, itemPocket->capacity * sizeof(struct ItemSlot));
 
-    gBagPockets[pocket].itemSlots[idx].itemId = itemId;
-    SetBagItemQuantity(&gBagPockets[pocket].itemSlots[idx].quantity, count);
-    return TRUE;
+        for (i = 0; i < itemPocket->capacity; i++)
+        {
+            if (newItems[i].itemId == itemId)
+            {
+                ownedCount = GetBagItemQuantity(&newItems[i].quantity);
+                // check if won't exceed max slot capacity
+                if (ownedCount + count <= slotCapacity)
+                {
+                    // successfully added to already existing item's count
+                    SetBagItemQuantity(&newItems[i].quantity, ownedCount + count);
+
+                    // goto SUCCESS_ADD_ITEM;
+                    // is equivalent but won't match
+
+                    memcpy(itemPocket->itemSlots, newItems, itemPocket->capacity * sizeof(struct ItemSlot));
+                    Free(newItems);
+                    return TRUE;
+                }
+                else
+                {
+                    // try creating another instance of the item if possible
+                    if (pocket == POCKET_TM_CASE - 1 || pocket == POCKET_BERRY_POUCH - 1)
+                    {
+                        Free(newItems);
+                        return FALSE;
+                    }
+                    else
+                    {
+                        count -= slotCapacity - ownedCount;
+                        SetBagItemQuantity(&newItems[i].quantity, slotCapacity);
+                        // don't create another instance of the item if it's at max slot capacity and count is equal to 0
+                        if (count == 0)
+                        {
+                            goto SUCCESS_ADD_ITEM;
+                        }
+                    }
+                }
+            }
+        }
+
+        // we're done if quantity is equal to 0
+        if (count > 0)
+        {
+            // either no existing item was found or we have to create another instance, because the capacity was exceeded
+            for (i = 0; i < itemPocket->capacity; i++)
+            {
+                if (newItems[i].itemId == ITEM_NONE)
+                {
+                    newItems[i].itemId = itemId;
+                    if (count > slotCapacity)
+                    {
+                        // try creating a new slot with max capacity if duplicates are possible
+                        if (pocket == POCKET_TM_CASE - 1 || pocket == POCKET_BERRY_POUCH - 1)
+                        {
+                            Free(newItems);
+                            return FALSE;
+                        }
+                        count -= slotCapacity;
+                        SetBagItemQuantity(&newItems[i].quantity, slotCapacity);
+                    }
+                    else
+                    {
+                        // created a new slot and added quantity
+                        SetBagItemQuantity(&newItems[i].quantity, count);
+                        goto SUCCESS_ADD_ITEM;
+                    }
+                }
+            }
+
+            if (count > 0)
+            {
+                Free(newItems);
+                return FALSE;
+            }
+        }
+    SUCCESS_ADD_ITEM:
+        memcpy(itemPocket->itemSlots, newItems, itemPocket->capacity * sizeof(struct ItemSlot));
+        Free(newItems);
+        return TRUE;
+    }
 }
 
 bool8 RemoveBagItem(u16 itemId, u16 count)
 {
     u8 i;
     u8 pocket;
+    u8 var;
+    u16 totalQuantity = 0;
+    u16 ownedCount;
+    struct BagPocket* itemPocket;
 
-    if (ItemId_GetPocket(itemId) == 0)
-        return FALSE;
-
-    if (itemId == ITEM_NONE)
+    if (ItemId_GetPocket(itemId) == 0 || itemId == ITEM_NONE)
         return FALSE;
 
     pocket = ItemId_GetPocket(itemId) - 1;
+    itemPocket = &gBagPockets[pocket];
+
+    for (i = 0; i < itemPocket->capacity; i++)
+    {
+        if (itemPocket->itemSlots[i].itemId == itemId)
+            totalQuantity += GetBagItemQuantity(&itemPocket->itemSlots[i].quantity);
+    }
+
+    if (totalQuantity < count)
+        return FALSE;   // We don't have enough of the item
+
+    var = GetItemListPosition(pocket);
+    if (itemPocket->capacity > var
+        && itemPocket->itemSlots[var].itemId == itemId)
+    {
+        ownedCount = GetBagItemQuantity(&itemPocket->itemSlots[var].quantity);
+        if (ownedCount >= count)
+        {
+            SetBagItemQuantity(&itemPocket->itemSlots[var].quantity, ownedCount - count);
+            count = 0;
+        }
+        else
+        {
+            count -= ownedCount;
+            SetBagItemQuantity(&itemPocket->itemSlots[var].quantity, 0);
+        }
+
+        if (GetBagItemQuantity(&itemPocket->itemSlots[var].quantity) == 0)
+            itemPocket->itemSlots[var].itemId = ITEM_NONE;
+
+        if (count == 0)
+            return TRUE;
+    }
+
     // Check for item slots that contain the item
     for (i = 0; i < gBagPockets[pocket].capacity; i++)
     {
-        if (gBagPockets[pocket].itemSlots[i].itemId == itemId)
+        if (itemPocket->itemSlots[i].itemId == itemId)
         {
-            u16 quantity;
-            // Does this item slot contain enough of the item?
-            quantity = GetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity);
-            if (quantity >= count)
+            ownedCount = GetBagItemQuantity(&itemPocket->itemSlots[i].quantity);
+            if (ownedCount >= count)
             {
-                quantity -= count;
-                SetBagItemQuantity(&gBagPockets[pocket].itemSlots[i].quantity, quantity);
-                if (quantity == 0)
-                    gBagPockets[pocket].itemSlots[i].itemId = ITEM_NONE;
-                return TRUE;
+                SetBagItemQuantity(&itemPocket->itemSlots[i].quantity, ownedCount - count);
+                count = 0;
             }
-            // RS and Emerald check whether there is enough of the
-            // item across all stacks.
-            // For whatever reason, FR/LG assume there's only one
-            // stack of the item.
             else
-                return FALSE;
+            {
+                count -= ownedCount;
+                SetBagItemQuantity(&itemPocket->itemSlots[i].quantity, 0);
+            }
+
+            if (GetBagItemQuantity(&itemPocket->itemSlots[i].quantity) == 0)
+                itemPocket->itemSlots[i].itemId = ITEM_NONE;
+
+            if (count == 0)
+                return TRUE;
         }
     }
     return FALSE;
@@ -382,6 +492,39 @@ bool8 CheckPCHasItem(u16 itemId, u16 count)
     return FALSE;
 }
 
+bool8 CheckPCHasSpace(u16 itemId, u16 count)
+{
+    u8 i;
+    u16 ownedCount = 0;
+
+    for (i = 0; i < PC_ITEMS_COUNT; i++) {  // Get owned count
+        if (gSaveBlock1Ptr->pcItems[i].itemId == itemId)
+            ownedCount = GetPcItemQuantity(&gSaveBlock1Ptr->pcItems[i].quantity);
+    }
+
+    if (ownedCount + count <= MAX_PC_ITEM_CAPACITY) {  // If there's room in already existing slot
+        return TRUE;
+    }
+
+    // Check space in empty item slots
+    if (count > 0) {
+        for (i = 0; i < PC_ITEMS_COUNT; i++) {
+            if (gSaveBlock1Ptr->pcItems[i].itemId == ITEM_NONE) {
+                if (count > PC_ITEMS_COUNT) {
+                    count -= PC_ITEMS_COUNT;
+                }
+                else {
+                    count = 0; //should be return TRUE, but that doesn't match
+                    break;
+                }
+            }
+        }
+        if (count > 0)
+            return FALSE; // No more item slots. The bag is full
+    }
+    return TRUE;
+}
+
 bool8 AddPCItem(u16 itemId, u16 count)
 {
     u8 i;
@@ -457,13 +600,13 @@ void ItemPcCompaction(void)
 
 void RegisteredItemHandleBikeSwap(void)
 {
-    switch (gSaveBlock1Ptr->registeredItem)
+    switch (gSaveBlock1Ptr->registeredItemSelect)
     {
     case ITEM_MACH_BIKE:
-        gSaveBlock1Ptr->registeredItem = ITEM_ACRO_BIKE;
+        gSaveBlock1Ptr->registeredItemSelect = ITEM_ACRO_BIKE;
         break;
     case ITEM_ACRO_BIKE:
-        gSaveBlock1Ptr->registeredItem = ITEM_MACH_BIKE;
+        gSaveBlock1Ptr->registeredItemSelect = ITEM_MACH_BIKE;
         break;
     }
 }
@@ -551,6 +694,11 @@ u16 BagGetQuantityByPocketPosition(u8 pocketId, u16 slotId)
     return GetBagItemQuantity(&gBagPockets[pocketId - 1].itemSlots[slotId].quantity);
 }
 
+u8 GetItemListPosition(u8 pocketId)
+{
+    return gBagMenuState.itemsAbove[pocketId] + gBagMenuState.cursorPos[pocketId];
+}
+
 u16 BagGetQuantityByItemId(u16 itemId)
 {
     u16 i;
@@ -626,6 +774,11 @@ u16 ItemId_GetPrice(u16 itemId)
 u8 ItemId_GetHoldEffect(u16 itemId)
 {
     return gItems[SanitizeItemId(itemId)].holdEffect;
+}
+
+void ItemId_GetHoldEffectParam_Script()
+{
+    VarSet(VAR_RESULT, ItemId_GetHoldEffectParam(VarGet(VAR_0x8004)));
 }
 
 u8 ItemId_GetHoldEffectParam(u16 itemId)

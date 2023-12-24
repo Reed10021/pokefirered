@@ -51,6 +51,12 @@ EventScript_ReceivedItemWaitFanfare::
 	delay 50
 	return
 
+Std_MsgboxAnyButtonPress::
+	message 0x0
+	waitmessage
+	waitanybuttonpress
+	return
+
 EventScript_UnusedReturn::
 	return
 

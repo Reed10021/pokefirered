@@ -2,6 +2,8 @@
 #include "gflib.h"
 #include "scanline_effect.h"
 #include "text_window_graphics.h"
+#include "event_data.h"
+#include "new_menu_helpers.h"
 #include "menu.h"
 #include "task.h"
 #include "overworld.h"
@@ -10,6 +12,7 @@
 #include "strings.h"
 #include "field_fadetransition.h"
 #include "gba/m4a_internal.h"
+#include "constants/songs.h"
 
 // can't include the one in menu_helpers.h since Task_OptionMenu needs bool32 for matching
 bool32 IsActiveOverworldLinkBusy(void);
@@ -24,6 +27,8 @@ enum
     MENUITEM_BUTTONMODE,
     MENUITEM_FRAMETYPE,
     MENUITEM_CANCEL,
+    MENUITEM_FLASHBACK,
+    MENUITEM_CANCEL_PG2,
     MENUITEM_COUNT
 };
 
@@ -45,6 +50,7 @@ struct OptionMenu
 };
 
 static EWRAM_DATA struct OptionMenu *sOptionMenuPtr = NULL;
+static EWRAM_DATA u8 sCurrPage = 0;
 
 //Function Declarataions
 static void CB2_InitOptionMenu(void);
@@ -131,7 +137,7 @@ static const struct BgTemplate sOptionMenuBgTemplates[] =
 };
 
 static const u16 sOptionMenuPalette[] = INCBIN_U16("graphics/misc/option_menu.gbapal");
-static const u16 sOptionMenuItemCounts[MENUITEM_COUNT] = {3, 2, 2, 2, 3, 10, 0};
+static const u16 sOptionMenuItemCounts[MENUITEM_COUNT] = {3, 2, 2, 2, 3, 10, 0, 2, 0};
 
 static const u8 *const sOptionMenuItemsNames[MENUITEM_COUNT] =
 {
@@ -142,6 +148,8 @@ static const u8 *const sOptionMenuItemsNames[MENUITEM_COUNT] =
     [MENUITEM_BUTTONMODE]  = gText_ButtonMode,
     [MENUITEM_FRAMETYPE]   = gText_Frame,
     [MENUITEM_CANCEL]      = gText_OptionMenuCancel,
+    [MENUITEM_FLASHBACK]   = gText_Flashback,
+    [MENUITEM_CANCEL_PG2]  = gText_OptionMenuCancel,
 };
 
 static const u8 *const sTextSpeedOptions[] =
@@ -212,6 +220,7 @@ void CB2_OptionsMenuFromStartMenu(void)
     sOptionMenuPtr->option[MENUITEM_SOUND] = gSaveBlock2Ptr->optionsSound;
     sOptionMenuPtr->option[MENUITEM_BUTTONMODE] = gSaveBlock2Ptr->optionsButtonMode;
     sOptionMenuPtr->option[MENUITEM_FRAMETYPE] = gSaveBlock2Ptr->optionsWindowFrameType;
+    sOptionMenuPtr->option[MENUITEM_FLASHBACK] = FlagGet(FLAG_FLASHBACKS_DISABLED);
     
     for (i = 0; i < MENUITEM_COUNT - 1; i++)
     {
@@ -408,17 +417,60 @@ static void Task_OptionMenu(u8 taskId)
     }
 }
 
+static void Task_ChangePage()
+{
+    u8 i;
+    PrintOptionMenuHeader();
+    LoadOptionMenuItemNames();
+    for (i = 0; i < MENUITEM_COUNT; i++)
+        BufferOptionMenuString(i);
+    PutWindowTilemap(1);
+    CopyWindowToVram(WIN_OPTIONS, COPYWIN_FULL);
+}
+
 static u8 OptionMenu_ProcessInput(void)
 { 
     u16 current;
     u16 *curr;
-    if (JOY_REPT(DPAD_RIGHT))
+
+    if (JOY_NEW(L_BUTTON))
+    {
+        if (sCurrPage == 0)
+        {
+            PlaySE(SE_BOO);
+            return 0;
+        }
+        FillWindowPixelBuffer(WIN_OPTIONS, PIXEL_FILL(1));
+        ClearStdWindowAndFrame(WIN_OPTIONS, FALSE);
+        sCurrPage = 0;
+        sOptionMenuPtr->cursorPos = MENUITEM_TEXTSPEED;
+        Task_ChangePage();
+        PlaySE(SE_BAG_POCKET);
+        return 3;
+    }
+    else if (JOY_NEW(R_BUTTON))
+    {
+        if (sCurrPage == 1)
+        {
+            PlaySE(SE_BOO);
+            return 0;
+        }
+        FillWindowPixelBuffer(WIN_OPTIONS, PIXEL_FILL(1));
+        ClearStdWindowAndFrame(WIN_OPTIONS, FALSE);
+        sCurrPage = 1;
+        sOptionMenuPtr->cursorPos = MENUITEM_FLASHBACK;
+        Task_ChangePage();
+        PlaySE(SE_BAG_POCKET);
+        return 3;
+    }
+    else if (JOY_REPT(DPAD_RIGHT))
     {
         current = sOptionMenuPtr->option[(sOptionMenuPtr->cursorPos)];
         if (current == (sOptionMenuItemCounts[sOptionMenuPtr->cursorPos] - 1))
             sOptionMenuPtr->option[sOptionMenuPtr->cursorPos] = 0;
         else
             sOptionMenuPtr->option[sOptionMenuPtr->cursorPos] = current + 1;
+        PlaySE(SE_SELECT);
         if (sOptionMenuPtr->cursorPos == MENUITEM_FRAMETYPE)
             return 2;
         else
@@ -431,7 +483,7 @@ static u8 OptionMenu_ProcessInput(void)
             *curr = sOptionMenuItemCounts[sOptionMenuPtr->cursorPos] - 1;
         else
             --*curr;
-        
+        PlaySE(SE_SELECT);
         if (sOptionMenuPtr->cursorPos == MENUITEM_FRAMETYPE)
             return 2;
         else
@@ -439,22 +491,46 @@ static u8 OptionMenu_ProcessInput(void)
     }
     else if (JOY_REPT(DPAD_UP))
     {
-        if (sOptionMenuPtr->cursorPos == MENUITEM_TEXTSPEED)
-            sOptionMenuPtr->cursorPos = MENUITEM_CANCEL;
+        if (sCurrPage == 0)
+        {
+            if (sOptionMenuPtr->cursorPos == MENUITEM_TEXTSPEED)
+                sOptionMenuPtr->cursorPos = MENUITEM_CANCEL;
+            else
+                sOptionMenuPtr->cursorPos = sOptionMenuPtr->cursorPos - 1;
+        }
         else
-            sOptionMenuPtr->cursorPos = sOptionMenuPtr->cursorPos - 1;
+        {
+            if (sOptionMenuPtr->cursorPos == MENUITEM_FLASHBACK)
+                sOptionMenuPtr->cursorPos = MENUITEM_CANCEL_PG2;
+            else
+                sOptionMenuPtr->cursorPos = sOptionMenuPtr->cursorPos - 1;
+        }
+        PlaySE(SE_BAG_CURSOR);
         return 3;        
     }
     else if (JOY_REPT(DPAD_DOWN))
     {
-        if (sOptionMenuPtr->cursorPos == MENUITEM_CANCEL)
-            sOptionMenuPtr->cursorPos = MENUITEM_TEXTSPEED;
+        if (sCurrPage == 0)
+        {
+            if (sOptionMenuPtr->cursorPos == MENUITEM_CANCEL)
+                sOptionMenuPtr->cursorPos = MENUITEM_TEXTSPEED;
+            else
+                sOptionMenuPtr->cursorPos = sOptionMenuPtr->cursorPos + 1;
+        }
         else
-            sOptionMenuPtr->cursorPos = sOptionMenuPtr->cursorPos + 1;
+        {
+            if (sOptionMenuPtr->cursorPos == MENUITEM_CANCEL_PG2)
+                sOptionMenuPtr->cursorPos = MENUITEM_FLASHBACK;
+            else
+                sOptionMenuPtr->cursorPos = sOptionMenuPtr->cursorPos + 1;
+        }
+        PlaySE(SE_BAG_CURSOR);
         return 3;
     }
     else if (JOY_NEW(B_BUTTON) || JOY_NEW(A_BUTTON))
     {
+        sCurrPage = 0;
+        PlaySE(SE_SELECT);
         return 1;
     }
     else
@@ -470,9 +546,19 @@ static void BufferOptionMenuString(u8 selection)
     u8 dst[3];
     u8 x, y;
     
+    if (sCurrPage == 0 && selection >= MENUITEM_FLASHBACK)
+        return;
+    else if (sCurrPage == 1 && selection < MENUITEM_FLASHBACK)
+        return;
+
     memcpy(dst, sOptionMenuTextColor, 3);
     x = 0x82;
-    y = ((GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT) - 1) * selection) + 2;
+
+    if(sCurrPage == 0)
+        y = ((GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT) - 1) * selection) + 2;
+    else
+        y = ((GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT) - 1) * (selection - MENUITEM_FLASHBACK)) + 2;
+
     FillWindowPixelRect(1, 1, x, y, 0x46, GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT));
 
     switch (selection)
@@ -498,6 +584,8 @@ static void BufferOptionMenuString(u8 selection)
         StringAppendN(str, buf, 3);
         AddTextPrinterParameterized3(1, FONT_NORMAL, x, y, dst, -1, str);
         break;
+    case MENUITEM_FLASHBACK:
+        AddTextPrinterParameterized3(1, FONT_NORMAL, x, y, dst, -1, sBattleSceneOptions[sOptionMenuPtr->option[selection]]);
     default:
         break;
     }
@@ -517,17 +605,47 @@ static void CloseAndSaveOptionMenu(u8 taskId)
     gSaveBlock2Ptr->optionsButtonMode = sOptionMenuPtr->option[MENUITEM_BUTTONMODE];
     gSaveBlock2Ptr->optionsWindowFrameType = sOptionMenuPtr->option[MENUITEM_FRAMETYPE];
     SetPokemonCryStereo(gSaveBlock2Ptr->optionsSound);
+    if (sOptionMenuPtr->option[MENUITEM_FLASHBACK] == 0)
+        FlagClear(FLAG_FLASHBACKS_DISABLED);
+    else
+        FlagSet(FLAG_FLASHBACKS_DISABLED);
     FREE_AND_SET_NULL(sOptionMenuPtr);
     DestroyTask(taskId);
 }
 
+#define PAGE_COUNT 2
+#define GetStringRightAlignXOffset2(_fontId, _string, _maxWidth) ({ \
+    u16 strWidth = GetStringWidth(_fontId, _string, 0); \
+    _maxWidth - strWidth; \
+})
+
 static void PrintOptionMenuHeader(void)
 {
-    FillWindowPixelBuffer(0, PIXEL_FILL(1));
+    u32 i, widthOptions, xMid;
+    u8 pageDots[9] = _("");  // Array size should be at least (2 * PAGE_COUNT) -1
+    widthOptions = GetStringWidth(FONT_NORMAL, gText_Option, 0);
+
+    for (i = 0; i < PAGE_COUNT; i++)
+    {
+        if (i == sCurrPage)
+            StringAppend(pageDots, gText_LargeDot);
+        else
+            StringAppend(pageDots, gText_SmallDot);
+        if (i < PAGE_COUNT - 1)
+            StringAppend(pageDots, gText_RegionMap_Space);
+    }
+    xMid = (8 + widthOptions + 5);
+
+    FillWindowPixelBuffer(WIN_TEXT_OPTION, PIXEL_FILL(1));
     AddTextPrinterParameterized(WIN_TEXT_OPTION, FONT_NORMAL, gText_Option, 8, 1, TEXT_SKIP_DRAW, NULL);
-    PutWindowTilemap(0);
-    CopyWindowToVram(0, COPYWIN_FULL);
+    AddTextPrinterParameterized(WIN_TEXT_OPTION, FONT_NORMAL, pageDots, xMid, 1, TEXT_SKIP_DRAW, NULL);
+    AddTextPrinterParameterized(WIN_TEXT_OPTION, FONT_NORMAL, gText_PageNav, GetStringRightAlignXOffset2(FONT_NORMAL, gText_PageNav, 198), 1, TEXT_SKIP_DRAW, NULL);
+    PutWindowTilemap(WIN_TEXT_OPTION);
+    CopyWindowToVram(WIN_TEXT_OPTION, COPYWIN_FULL);
 }
+
+#undef PAGE_COUNT
+#undef GetStringRightAlignXOffset2
 
 static void DrawOptionMenuBg(void)
 {
@@ -555,18 +673,39 @@ static void DrawOptionMenuBg(void)
 
 static void LoadOptionMenuItemNames(void)
 {
-    u8 i;
+    u8 i = 0;
+    u8 menuCount = 0;
+    u8 menuPos = 0;
+
+    if (sCurrPage == 0)
+        menuCount = MENUITEM_FLASHBACK;
+    else
+    {
+        i = MENUITEM_FLASHBACK;
+        menuCount = MENUITEM_COUNT;
+    }
     
     FillWindowPixelBuffer(1, PIXEL_FILL(1));
-    for (i = 0; i < MENUITEM_COUNT; i++)
+    for (i; i < menuCount; i++)
     {
-        AddTextPrinterParameterized(WIN_OPTIONS, FONT_NORMAL, sOptionMenuItemsNames[i], 8, (u8)((i * (GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT))) + 2) - i, TEXT_SKIP_DRAW, NULL);    
+        AddTextPrinterParameterized(WIN_OPTIONS, FONT_NORMAL, sOptionMenuItemsNames[i], 8, (u8)((menuPos * (GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT))) + 2) - menuPos, TEXT_SKIP_DRAW, NULL);
+        menuPos++;
     }
 }
 
 static void UpdateSettingSelectionDisplay(u16 selection)
 {
     u16 maxLetterHeight, y;
+
+    if (sCurrPage == 0 && selection >= MENUITEM_FLASHBACK)
+        return;
+    else if (sCurrPage == 1 && selection < MENUITEM_FLASHBACK)
+        return;
+
+    if (sCurrPage == 1)
+    {
+        selection = selection - MENUITEM_FLASHBACK;
+    }
     
     maxLetterHeight = GetFontAttribute(FONT_NORMAL, FONTATTR_MAX_LETTER_HEIGHT);
     y = selection * (maxLetterHeight - 1) + 0x3A;

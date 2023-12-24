@@ -31,6 +31,7 @@ static EWRAM_DATA struct ObjectEvent * sPlayerObjectPtr = NULL;
 static EWRAM_DATA u8 sTeleportSavedFacingDirection = DIR_NONE;
 EWRAM_DATA struct ObjectEvent gObjectEvents[OBJECT_EVENTS_COUNT] = {};
 EWRAM_DATA struct PlayerAvatar gPlayerAvatar = {};
+EWRAM_DATA bool8 gRunToggleBtnSet = FALSE;
 
 static u8 ObjectEventCB2_NoMovement2(struct ObjectEvent * object, struct Sprite *sprite);
 static bool8 TryUpdatePlayerSpinDirection(void);
@@ -513,18 +514,51 @@ static void PlayerNotOnBikeMoving(u8 direction, u16 heldKeys)
         return;
     }
 
-    if ((heldKeys & B_BUTTON) && FlagGet(FLAG_SYS_B_DASH)
-        && !IsRunningDisallowed(gObjectEvents[gPlayerAvatar.objectEventId].currentMetatileBehavior))
+    if ((gRunToggleBtnSet || FlagGet(FLAG_RUNNING_SHOES_TOGGLE) || (heldKeys & B_BUTTON))
+        && FlagGet(FLAG_SYS_B_DASH) && IsRunningDisallowed(gObjectEvents[gPlayerAvatar.objectEventId].currentMetatileBehavior) == 0)
     {
-        if (PlayerIsMovingOnRockStairs(direction))
-            PlayerRunSlow(direction);
-        else
-            PlayerRun(direction);
+        if (gRunToggleBtnSet)
+        {
+            gRunToggleBtnSet = FALSE;
+            if (FlagGet(FLAG_RUNNING_SHOES_TOGGLE) == FALSE)
+            {
+                FlagSet(FLAG_RUNNING_SHOES_TOGGLE);
+                if (PlayerIsMovingOnRockStairs(direction))
+                    PlayerRunSlow(direction);
+                else
+                    PlayerRun(direction);
+                gPlayerAvatar.flags |= PLAYER_AVATAR_FLAG_DASH;
+                return;
+            }
+            else
+            {
+                FlagClear(FLAG_RUNNING_SHOES_TOGGLE);
+                gRunToggleBtnSet = FALSE;
+                if (!(heldKeys & B_BUTTON))
+                {
+                    if (PlayerIsMovingOnRockStairs(direction))
+                        PlayerWalkSlow(direction);
+                    else
+                        PlayerWalkNormal(direction);
+                }
+                else
+                {
+                    if (PlayerIsMovingOnRockStairs(direction))
+                        PlayerRunSlow(direction);
+                    else
+                        PlayerRun(direction);
+                    gPlayerAvatar.flags |= PLAYER_AVATAR_FLAG_DASH;
+                }
+                return;
+            }
+        }
+        PlayerRun(direction);
         gPlayerAvatar.flags |= PLAYER_AVATAR_FLAG_DASH;
         return;
     }
     else
     {
+        gRunToggleBtnSet = FALSE;
         if (PlayerIsMovingOnRockStairs(direction))
             PlayerWalkSlow(direction);
         else
@@ -1776,13 +1810,13 @@ static bool8 Fishing5(struct Task *task)
 // Determine if fish bites
 static bool8 Fishing6(struct Task *task)
 {
-    bool8 bite;
+    //bool8 bite;
 
     AlignFishingAnimationFrames(&gSprites[gPlayerAvatar.spriteId]);
     task->tStep++;
-    bite = FALSE;
+    //bite = FALSE;
 
-    if (!DoesCurrentMapHaveFishingMons() || Random() & 1)
+    if (!DoesCurrentMapHaveFishingMons() /*|| Random() & 1*/)
     {
         task->tStep = FISHING_NO_BITE;
     }
@@ -1807,9 +1841,9 @@ static bool8 Fishing8(struct Task *task)
 
     AlignFishingAnimationFrames(&gSprites[gPlayerAvatar.spriteId]);
     task->tFrameCounter++;
-    if (task->tFrameCounter >= reelTimeouts[task->tFishingRod])
-        task->tStep = FISHING_GOT_AWAY;
-    else if (gMain.newKeys & A_BUTTON)
+    //if (task->tFrameCounter >= reelTimeouts[task->tFishingRod])
+    //    task->tStep = FISHING_GOT_AWAY;
+    //else if (gMain.newKeys & A_BUTTON)
         task->tStep++;
     return FALSE;
 }
@@ -1845,7 +1879,7 @@ static bool8 Fishing10(struct Task *task)
 {
     AlignFishingAnimationFrames(&gSprites[gPlayerAvatar.spriteId]);
     FillWindowPixelBuffer(0, PIXEL_FILL(1));
-    AddTextPrinterParameterized2(0, FONT_NORMAL, gText_PokemonOnHook, 1, 0, TEXT_COLOR_DARK_GRAY, TEXT_COLOR_WHITE, TEXT_COLOR_LIGHT_GRAY);
+    //AddTextPrinterParameterized2(0, FONT_NORMAL, gText_PokemonOnHook, 1, 0, TEXT_COLOR_DARK_GRAY, TEXT_COLOR_WHITE, TEXT_COLOR_LIGHT_GRAY);
     task->tStep++;
     task->tFrameCounter = 0;
     return FALSE;
@@ -1856,11 +1890,11 @@ static bool8 Fishing11(struct Task *task)
     if (task->tFrameCounter == 0)
         AlignFishingAnimationFrames(&gSprites[gPlayerAvatar.spriteId]);
 
-    RunTextPrinters();
+    //RunTextPrinters();
 
     if (task->tFrameCounter == 0)
     {
-        if (!IsTextPrinterActive(0))
+        //if (!IsTextPrinterActive(0))
         {
             struct ObjectEvent *playerObjEvent = &gObjectEvents[gPlayerAvatar.objectEventId];
 
@@ -1893,8 +1927,8 @@ static bool8 Fishing12(struct Task *task)
     StartSpriteAnim(&gSprites[gPlayerAvatar.spriteId], GetFishingNoCatchDirectionAnimNum(GetPlayerFacingDirection()));
     FillWindowPixelBuffer(0, PIXEL_FILL(1));
     AddTextPrinterParameterized2(0, FONT_NORMAL, gText_NotEvenANibble, 1, NULL, TEXT_COLOR_DARK_GRAY, TEXT_COLOR_WHITE, TEXT_COLOR_LIGHT_GRAY);
-    task->tStep = FISHING_SHOW_RESULT;
-    return TRUE;
+    //task->tStep = FISHING_SHOW_RESULT;
+    return FALSE;
 }
 
 // It got away

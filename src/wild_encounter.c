@@ -2,6 +2,7 @@
 #include "random.h"
 #include "wild_encounter.h"
 #include "event_data.h"
+#include "daycare.h"
 #include "fieldmap.h"
 #include "random.h"
 #include "roamer.h"
@@ -13,6 +14,7 @@
 #include "script.h"
 #include "link.h"
 #include "quest_log.h"
+#include "safari_zone.h"
 #include "constants/maps.h"
 #include "constants/abilities.h"
 #include "constants/items.h"
@@ -223,18 +225,98 @@ static bool8 UnlockedTanobyOrAreNotInTanoby(void)
     return FALSE;
 }
 
+static u8 PickWildMonNature(void)
+{
+    u8 i;
+    u8 j;
+    struct Pokeblock* safariPokeblock;
+    u8 natures[NUM_NATURES];
+
+    // Pokeblock Nature Calc - No pokeblocks in FRLG
+    //if (GetSafariZoneFlag() == TRUE && Random() % 100 < 80)
+    //{
+    //    safariPokeblock = SafariZoneGetActivePokeblock();
+    //    if (safariPokeblock != NULL)
+    //    {
+    //        for (i = 0; i < NUM_NATURES; i++)
+    //            natures[i] = i;
+    //        for (i = 0; i < NUM_NATURES - 1; i++)
+    //        {
+    //            for (j = i + 1; j < NUM_NATURES; j++)
+    //            {
+    //                if (Random() & 1)
+    //                {
+    //                    u8 temp;
+    //                    SWAP(natures[i], natures[j], temp);
+    //                }
+    //            }
+    //        }
+    //        for (i = 0; i < NUM_NATURES; i++)
+    //        {
+    //            if (PokeblockGetGain(natures[i], safariPokeblock) > 0)
+    //                return natures[i];
+    //        }
+    //    }
+    //}
+    // check synchronize for a pokemon with the same ability
+    if (!GetMonData(&gPlayerParty[0], MON_DATA_SANITY_IS_EGG)
+        && GetMonAbility(&gPlayerParty[0]) == ABILITY_SYNCHRONIZE
+        /* && Random() % 2 == 0*/)
+    {
+        return GetMonData(&gPlayerParty[0], MON_DATA_PERSONALITY) % NUM_NATURES;
+    }
+
+    // random nature
+    return Random() % NUM_NATURES;
+}
+
 static void GenerateWildMon(u16 species, u8 level, u8 slot)
 {
+    bool32 checkCuteCharm = TRUE;
     u32 personality;
     s8 chamber;
     ZeroEnemyPartyMons();
+
+    switch (gSpeciesInfo[species].genderRatio)
+    {
+    case MON_MALE:
+    case MON_FEMALE:
+    case MON_GENDERLESS:
+        checkCuteCharm = FALSE;
+        break;
+    }
+
     if (species != SPECIES_UNOWN)
     {
-        CreateMonWithNature(&gEnemyParty[0], species, level, USE_RANDOM_IVS, Random() % NUM_NATURES);
+        if (checkCuteCharm
+            && !GetMonData(&gPlayerParty[0], MON_DATA_SANITY_IS_EGG)
+            && GetMonAbility(&gPlayerParty[0]) == ABILITY_CUTE_CHARM
+            && Random() % 3 != 0)
+        {
+            u16 leadingMonSpecies = GetMonData(&gPlayerParty[0], MON_DATA_SPECIES);
+            u32 leadingMonPersonality = GetMonData(&gPlayerParty[0], MON_DATA_PERSONALITY);
+            u8 gender = GetGenderFromSpeciesAndPersonality(leadingMonSpecies, leadingMonPersonality);
+
+            // misses mon is genderless check, although no genderless mon can have cute charm as ability
+            if (gender == MON_FEMALE)
+                gender = MON_MALE;
+            else
+                gender = MON_FEMALE;
+
+            CreateMonWithGenderNatureLetter(&gEnemyParty[0], species, level, USE_RANDOM_IVS, gender, PickWildMonNature(), 0);
+            return;
+        }
+
+        CreateMonWithNature(&gEnemyParty[0], species, level, USE_RANDOM_IVS, PickWildMonNature());
     }
     else
     {
         chamber = gSaveBlock1Ptr->location.mapNum - MAP_NUM(SEVEN_ISLAND_TANOBY_RUINS_MONEAN_CHAMBER);
+        if (chamber < 0 || chamber > 6) // OOB check
+        {
+            CreateMonWithNature(&gEnemyParty[0], species, level, USE_RANDOM_IVS, PickWildMonNature());
+            return;
+        }
         personality = GenerateUnownPersonalityByLetter(sUnownLetterSlots[chamber][slot]);
         CreateMon(&gEnemyParty[0], species, level, USE_RANDOM_IVS, TRUE, personality, FALSE, 0);
     }
@@ -243,9 +325,41 @@ static void GenerateWildMon(u16 species, u8 level, u8 slot)
 static u32 GenerateUnownPersonalityByLetter(u8 letter)
 {
     u32 personality;
+    u16 trueChainCount = VarGet(VAR_CHAIN);
+    u32 rolls = 0; // If we're chaining, we get rolls equal to chainCount. So a chainCount of 24 = 24 additional rolls for shiny.
+    u32 adjustedChainCount = trueChainCount + 40; // Add some constant rerolls to the base chain rate because hard.
+    bool8 shinyFlag = FALSE;
+
+    // Reward long chains that haven't broken
+    if (trueChainCount >= 250)
+        adjustedChainCount += (trueChainCount * 4);
+    else if (trueChainCount >= 160)
+        adjustedChainCount += (trueChainCount * 3);
+    else if (trueChainCount >= 110)
+        adjustedChainCount += (trueChainCount * 2);
+    else if (trueChainCount >= 70)
+        adjustedChainCount += 90 + trueChainCount;
+    else if (trueChainCount >= 40)
+        adjustedChainCount += 40 + trueChainCount;
+    else if (trueChainCount >= 10)
+        adjustedChainCount += trueChainCount;
+
+    if (VarGet(VAR_SPECIESCHAINED) != SPECIES_UNOWN)
+        rolls = adjustedChainCount / 2; // If this is a pokemon we're not chaining, we get rolls equal to chainCount divided by 2. So a chainCount of 20 = 10 additional rolls for shiny.
     do
     {
         personality = (Random() << 16) | Random();
+        rolls++;
+    } while (!IsPersonalityShiny(personality, 0) && rolls < adjustedChainCount); // While not shiny (>= as opposed to < for the check) and while we haven't exceeded VAR_CHAIN rolls.
+
+    if (IsPersonalityShiny(personality, 0))
+        shinyFlag = TRUE;
+
+    do
+    {
+        personality = (Random() << 16) | Random();
+        if (shinyFlag)
+            ForceShiny(personality);
     } while (GetUnownLetterByPersonalityLoByte(personality) != letter);
     return personality;
 }
@@ -270,22 +384,37 @@ static bool8 TryGenerateWildMon(const struct WildPokemonInfo * info, u8 area, u8
 {
     u8 slot = 0;
     u8 level;
-    switch (area)
-    {
-    case WILD_AREA_LAND:
-        slot = ChooseWildMonIndex_Land();
-        break;
-    case WILD_AREA_WATER:
-        slot = ChooseWildMonIndex_WaterRock();
-        break;
-    case WILD_AREA_ROCKS:
-        slot = ChooseWildMonIndex_WaterRock();
-        break;
-    }
+    u32 rerollCount = 1;
+    u16 chainCount = VarGet(VAR_CHAIN);
+
+    if (chainCount >= 3) //If we're chaining.
+        rerollCount += chainCount / 2; // A chain of 24 == 12 rerolls for the species.
+    do {
+        rerollCount--;
+        switch (area)
+        {
+        case WILD_AREA_LAND:
+            slot = ChooseWildMonIndex_Land();
+            break;
+        case WILD_AREA_WATER:
+            slot = ChooseWildMonIndex_WaterRock();
+            break;
+        case WILD_AREA_ROCKS:
+            slot = ChooseWildMonIndex_WaterRock();
+            break;
+        }
+        if (chainCount >= 3)
+            if (info->wildPokemon[slot].species == VarGet(VAR_SPECIESCHAINED))
+                break;
+    } while (rerollCount > 0);
     level = ChooseWildMonLevel(&info->wildPokemon[slot]);
     if (flags == WILD_CHECK_REPEL && !IsWildLevelAllowedByRepel(level))
     {
-        return FALSE;
+        if (chainCount >= 3 && info->wildPokemon[slot].species == VarGet(VAR_SPECIESCHAINED)) {
+            // Do nothing if we are chaining and the species we picked is our chained species.
+        }
+        else
+            return FALSE;
     }
     GenerateWildMon(info->wildPokemon[slot].species, level, slot);
     return TRUE;
@@ -293,11 +422,105 @@ static bool8 TryGenerateWildMon(const struct WildPokemonInfo * info, u8 area, u8
 
 static u16 GenerateFishingEncounter(const struct WildPokemonInfo * info, u8 rod)
 {
-    u8 slot = ChooseWildMonIndex_Fishing(rod);
-    u8 level = ChooseWildMonLevel(&info->wildPokemon[slot]);
+    u8 slot;
+    u8 level;
+    u32 rerollCount = 1;
+    u16 chainCount = VarGet(VAR_CHAIN);
+    if (chainCount >= 3) //If we're chaining.
+        rerollCount += chainCount / 2;
+
+    do {
+        rerollCount--;
+        slot = ChooseWildMonIndex_Fishing(rod);
+        if (chainCount >= 3)
+            if (info->wildPokemon[slot].species == VarGet(VAR_SPECIESCHAINED))
+                break;
+    } while (rerollCount > 0);
+    level = ChooseWildMonLevel(&info->wildPokemon[slot]);
+
     GenerateWildMon(info->wildPokemon[slot].species, level, slot);
     return info->wildPokemon[slot].species;
 }
+
+static bool8 SetUpMassOutbreakEncounter(u8 flags)
+{
+    u16 i;
+
+    if (flags & WILD_CHECK_REPEL && !IsWildLevelAllowedByRepel(VarGet(VAR_OUTBREAK_LEVEL)))
+    {
+        if (VarGet(VAR_CHAIN) >= 3 && VarGet(VAR_OUTBREAK_SPECIES) == VarGet(VAR_SPECIESCHAINED)) {
+            // Do nothing if we are chaining and the species we picked is our chained species.
+        }
+        else
+            return FALSE;
+    }
+
+    GenerateWildMon(VarGet(VAR_OUTBREAK_SPECIES), VarGet(VAR_OUTBREAK_LEVEL), 0);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_1), 0);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_2), 1);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_3), 2);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_4), 3);
+
+    return TRUE;
+}
+
+static u16 SetUpMassOutbreakEncounterFishing()
+{
+    u16 i;
+
+    GenerateWildMon(VarGet(VAR_OUTBREAK_SPECIES), VarGet(VAR_OUTBREAK_LEVEL), 0);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_1), 0);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_2), 1);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_3), 2);
+    SetMonMoveSlot(&gEnemyParty[0], VarGet(VAR_OUTBREAK_MOVE_4), 3);
+
+    return VarGet(VAR_OUTBREAK_SPECIES);
+}
+
+static bool8 DoMassOutbreakEncounterTest(void)
+{
+    u32 encounterRate = 1;
+    u32 rerollCount = 1;
+    u16 chainCount = VarGet(VAR_CHAIN);
+    u8 route21North = MAP_NUM(ROUTE21_NORTH);
+    u8 route21South = MAP_NUM(ROUTE21_SOUTH);
+    u16 outbreakLocation = VarGet(VAR_OUTBREAK_LOCATION);
+
+    ApplyCleanseTagEncounterRateMod(&encounterRate);
+    if (encounterRate == 0)
+        return FALSE;
+
+    if (chainCount >= 3 && VarGet(VAR_OUTBREAK_SPECIES) == VarGet(VAR_SPECIESCHAINED)) //If we're chaining.
+        rerollCount += chainCount / 2;
+
+    // If an outbreak is occuring on Route 21 North or Route 21 South,
+    // and the player is on either Route 21 North or South, activate the outbreak.
+    // This is done because the game doesn't tell the player Route 21 is split between two maps.
+    if (VarGet(VAR_OUTBREAK_LOCATION) == route21North || 
+        VarGet(VAR_OUTBREAK_LOCATION) == route21South)
+    {
+        if ((gSaveBlock1Ptr->location.mapNum == route21North ||
+            gSaveBlock1Ptr->location.mapNum == route21South)
+            && gSaveBlock1Ptr->location.mapGroup == 3)
+        {
+            // Set outbreak location to current save location to ensure the next check is true.
+            outbreakLocation = gSaveBlock1Ptr->location.mapNum;
+        }
+    }
+
+    if (VarGet(VAR_OUTBREAK_SPECIES) != 0
+        && gSaveBlock1Ptr->location.mapNum == outbreakLocation
+        && gSaveBlock1Ptr->location.mapGroup == 3) // All current location map groups are map group 3.
+    {
+        do {
+            rerollCount--;
+            if (Random() % 100 < 50) // All current outbreaks use a probability value of 50
+                return TRUE;
+        } while (rerollCount > 0);
+    }
+    return FALSE;
+}
+
 
 static bool8 DoWildEncounterRateDiceRoll(u16 encounterRate)
 {
@@ -355,7 +578,7 @@ static bool8 DoGlobalWildEncounterDiceRoll(void)
 bool8 StandardWildEncounter(u32 currMetatileAttrs, u16 previousMetatileBehavior)
 {
     u16 headerId;
-    struct Roamer * roamer;
+    //struct Roamer * roamer;
 
     if (sWildEncountersDisabled == TRUE)
         return FALSE;
@@ -377,17 +600,23 @@ bool8 StandardWildEncounter(u32 currMetatileAttrs, u16 previousMetatileBehavior)
 
             else if (TryStartRoamerEncounter() == TRUE)
             {
-                roamer = &gSaveBlock1Ptr->roamer;
-                if (!IsWildLevelAllowedByRepel(roamer->level))
-                {
-                    return FALSE;
-                }
+                //roamer = &gSaveBlock1Ptr->roamer;
+                //if (!IsWildLevelAllowedByRepel(roamer->level))
+                //{
+                //    return FALSE;
+                //}
+                // Allow roamer to get through repel.
 
                 StartRoamerBattle();
                 return TRUE;
             }
             else
             {
+                if (DoMassOutbreakEncounterTest() == TRUE && SetUpMassOutbreakEncounter(WILD_CHECK_REPEL) == TRUE)
+                {
+                    StartWildBattle();
+                    return TRUE;
+                }
 
                 // try a regular wild land encounter
                 if (TryGenerateWildMon(gWildMonHeaders[headerId].landMonsInfo, WILD_AREA_LAND, WILD_CHECK_REPEL) == TRUE)
@@ -416,17 +645,23 @@ bool8 StandardWildEncounter(u32 currMetatileAttrs, u16 previousMetatileBehavior)
 
             if (TryStartRoamerEncounter() == TRUE)
             {
-                roamer = &gSaveBlock1Ptr->roamer;
-                if (!IsWildLevelAllowedByRepel(roamer->level))
-                {
-                    return FALSE;
-                }
+                //roamer = &gSaveBlock1Ptr->roamer;
+                //if (!IsWildLevelAllowedByRepel(roamer->level))
+                //{
+                //    return FALSE;
+                //}
 
                 StartRoamerBattle();
                 return TRUE;
             }
             else // try a regular surfing encounter
             {
+                if (DoMassOutbreakEncounterTest() == TRUE && SetUpMassOutbreakEncounter(WILD_CHECK_REPEL) == TRUE)
+                {
+                    StartWildBattle();
+                    return TRUE;
+                }
+
                 if (TryGenerateWildMon(gWildMonHeaders[headerId].waterMonsInfo, WILD_AREA_WATER, WILD_CHECK_REPEL) == TRUE)
                 {
                     StartWildBattle();
@@ -481,7 +716,10 @@ bool8 SweetScentWildEncounter(void)
             if (gWildMonHeaders[headerId].landMonsInfo == NULL)
                 return FALSE;
 
-            TryGenerateWildMon(gWildMonHeaders[headerId].landMonsInfo, WILD_AREA_LAND, 0);
+            if (DoMassOutbreakEncounterTest() == TRUE)
+                SetUpMassOutbreakEncounter(0);
+            else
+                TryGenerateWildMon(gWildMonHeaders[headerId].landMonsInfo, WILD_AREA_LAND, 0);
 
             StartWildBattle();
             return TRUE;
@@ -497,7 +735,11 @@ bool8 SweetScentWildEncounter(void)
             if (gWildMonHeaders[headerId].waterMonsInfo == NULL)
                 return FALSE;
 
-            TryGenerateWildMon(gWildMonHeaders[headerId].waterMonsInfo, WILD_AREA_WATER, 0);
+            if (DoMassOutbreakEncounterTest() == TRUE)
+                SetUpMassOutbreakEncounter(0);
+            else
+                TryGenerateWildMon(gWildMonHeaders[headerId].waterMonsInfo, WILD_AREA_WATER, 0);
+
             StartWildBattle();
             return TRUE;
         }
@@ -518,7 +760,10 @@ bool8 DoesCurrentMapHaveFishingMons(void)
 
 void FishingWildEncounter(u8 rod)
 {
-    GenerateFishingEncounter(gWildMonHeaders[GetCurrentMapWildMonHeaderId()].fishingMonsInfo, rod);
+    if (DoMassOutbreakEncounterTest() == TRUE)
+        SetUpMassOutbreakEncounterFishing();
+    else
+        GenerateFishingEncounter(gWildMonHeaders[GetCurrentMapWildMonHeaderId()].fishingMonsInfo, rod);
     IncrementGameStat(GAME_STAT_FISHING_CAPTURES);
     StartWildBattle();
 }
@@ -646,8 +891,13 @@ static u8 GetFluteEncounterRateModType(void)
 
 static void ApplyCleanseTagEncounterRateMod(u32 *encounterRate)
 {
-    if (IsLeadMonHoldingCleanseTag())
-        *encounterRate = *encounterRate * 2 / 3;
+    int i;
+    for (i = 0; i < PARTY_SIZE; i++) {
+        if (GetMonData(&gPlayerParty[i], MON_DATA_HELD_ITEM) == ITEM_CLEANSE_TAG) {
+            *encounterRate = 0;
+            break;
+        }
+    }
 }
 
 static bool8 IsLeadMonHoldingCleanseTag(void)

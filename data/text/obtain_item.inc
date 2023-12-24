@@ -8,12 +8,20 @@ Text_PutItemAway::
 	.string "{PLAYER} put the {STR_VAR_2}\n"
 	.string "in the {STR_VAR_3}.$"
 
+Text_PutItemInPC::
+	.string "{PLAYER} put away the {STR_VAR_2}\n"
+	.string "in the PC since bag is full.$"
+
 Text_FoundOneItem::
 	.string "{PLAYER} found one {STR_VAR_2}!$"
 
 Text_TooBadBagFull::
 	.string "Too bad!\n"
 	.string "The BAG is full…$"
+
+Text_TooBadBagAndPCAreFull::
+	.string "Too bad!\n"
+	.string "The BAG and PC are full…$"
 
 Text_FoundXCoins::
 	.string "{PLAYER} found\n"

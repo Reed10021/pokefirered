@@ -33,6 +33,18 @@ EventScript_Burglary::
 	end
 
 EventScript_PlayerFacingTVScreen::
+	goto_if_questlog EventScript_ReleaseEnd
+	special QuestLog_CutRecording
+	dotimebasedevents
+	special GetOutbreakMon
+	goto_if_eq VAR_RESULT, FALSE, normalTv
+	goto_if_eq VAR_TEMP_0, 1, normalTv
+	lock
+	msgbox Text_PlayerFacingTVScreen_Outbreak, MSGBOX_DEFAULT
+	setvar VAR_TEMP_0, 1
+	release
+	end
+normalTv:
 	msgbox Text_PlayerFacingTVScreen, MSGBOX_SIGN
 	end
 

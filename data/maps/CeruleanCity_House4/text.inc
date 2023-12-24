@@ -60,3 +60,11 @@ CeruleanCity_House4_Text_YourBerryPouchIsFull::
     .string "Hm? Your BERRY POUCH is full.\n"
     .string "My gift remains ungiven, then.$"
 
+CeruleanCity_House4_Text_AnOutbreak:
+	.string "Oh wow! Did you hear about the mass\n"
+	.string "outbreak of POKéMON on the news?\p"
+	.string "Apparently there is a bunch of\n"
+	.string "{STR_VAR_2} near {STR_VAR_1}!\p"
+	.string "The news said the outbreak will\n"
+	.string "remain for only today!$"
+

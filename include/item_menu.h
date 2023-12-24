@@ -34,11 +34,12 @@ void Bag_BeginCloseWin0Animation(void);
 void ItemMenu_SetExitCallback(void (*)(void));
 void DisplayItemMessageInBag(u8 taskId, u8 fontId, const u8 * string, TaskFunc followUpFunc);
 void Task_ReturnToBagFromContextMenu(u8 taskId);
+u8 GetItemListPosition(u8 pocketId);
 void CB2_BagMenuFromBattle(void);
 void InitOldManBag(void);
 void Pocket_CalculateNItemsAndMaxShowed(u8 pocketId);
 void PocketCalculateInitialCursorPosAndItemsAbove(u8 pocketId);
 void GoToBagMenu(u8 menuType, u8 pocket, MainCallback callback);
-bool8 UseRegisteredKeyItemOnField(void);
+bool8 UseRegisteredKeyItemOnField(u8 button);
 
 #endif //GUARD_ITEM_MENU_H

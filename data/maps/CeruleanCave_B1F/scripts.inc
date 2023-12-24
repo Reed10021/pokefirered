@@ -44,15 +44,30 @@ CeruleanCave_B1F_EventScript_Mewtwo::
 	goto_if_eq VAR_RESULT, B_OUTCOME_RAN, CeruleanCave_B1F_EventScript_RanFromMewtwo
 	goto_if_eq VAR_RESULT, B_OUTCOME_PLAYER_TELEPORTED, CeruleanCave_B1F_EventScript_RanFromMewtwo
 	setflag FLAG_FOUGHT_MEWTWO
+	call CeruleanCave_B1F_EventScript_Ticket
 	release
 	end
 
 CeruleanCave_B1F_EventScript_DefeatedMewtwo::
 	setflag FLAG_FOUGHT_MEWTWO
-	goto EventScript_RemoveStaticMon
+	call EventScript_RemoveStaticMon
+	call CeruleanCave_B1F_EventScript_Ticket
 	end
 
 CeruleanCave_B1F_EventScript_RanFromMewtwo::
 	setvar VAR_0x8004, SPECIES_MEWTWO
 	goto EventScript_MonFlewAway
 	end
+
+CeruleanCave_B1F_EventScript_Ticket::
+	checkitem ITEM_AURORA_TICKET
+	goto_if_eq VAR_RESULT, TRUE, CeruleanCave_B1F_EventScript_Ticket_NoTicket
+	msgbox CeruleanCave_B1F_Text_DefeatedMewtwo_SomethingOnTheGround, MSGBOX_DEFAULT
+	giveitem ITEM_AURORA_TICKET
+	setflag FLAG_ENABLE_SHIP_BIRTH_ISLAND
+CeruleanCave_B1F_EventScript_Ticket_NoTicket:
+	end
+
+CeruleanCave_B1F_Text_DefeatedMewtwo_SomethingOnTheGround:
+	.string "... \n"
+	.string "Huh? Something is on the ground!$"

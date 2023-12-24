@@ -198,7 +198,22 @@ CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveOmanyte::
 	setvar VAR_TEMP_1, SPECIES_OMANYTE
 	bufferspeciesname STR_VAR_1, SPECIES_OMANYTE
 	msgbox CinnabarIsland_PokemonLab_ExperimentRoom_Text_FossilMonBackToLife
-	givemon SPECIES_OMANYTE, 5
+	goto_if_set FLAG_REVIVED_DOME, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveOmanyte_NoItem
+	checkitem ITEM_DOME_FOSSIL
+	goto_if_eq VAR_RESULT, 1, skipDomeFossil
+	msgbox CinnabarIsland_PokemonLab_ExperimentRoom_Text_HoldingItem
+	giveitem ITEM_DOME_FOSSIL
+skipDomeFossil:
+	givemon SPECIES_OMANYTE, 20
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	setflag FLAG_REVIVED_HELIX
+	setflag FLAG_GOT_DOME_FOSSIL
+	clearflag FLAG_GOT_HELIX_FOSSIL
+	goto_if_eq VAR_RESULT, 0, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonParty
+	goto_if_eq VAR_RESULT, 1, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonPC
+	end
+CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveOmanyte_NoItem:
+	givemon SPECIES_OMANYTE, 20
 	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
 	setflag FLAG_REVIVED_HELIX
 	goto_if_eq VAR_RESULT, 0, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonParty
@@ -209,9 +224,25 @@ CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveKabuto::
 	setvar VAR_TEMP_1, SPECIES_KABUTO
 	bufferspeciesname STR_VAR_1, SPECIES_KABUTO
 	msgbox CinnabarIsland_PokemonLab_ExperimentRoom_Text_FossilMonBackToLife
-	givemon SPECIES_KABUTO, 5
+	goto_if_set FLAG_REVIVED_HELIX, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveKabuto_NoItem
+	checkitem ITEM_HELIX_FOSSIL
+	goto_if_eq VAR_RESULT, 1, skipHelixFossil
+	msgbox CinnabarIsland_PokemonLab_ExperimentRoom_Text_HoldingItem
+	giveitem ITEM_HELIX_FOSSIL
+skipHelixFossil:
+	givemon SPECIES_KABUTO, 20
 	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
 	setflag FLAG_REVIVED_DOME
+	setflag FLAG_GOT_HELIX_FOSSIL
+	clearflag FLAG_GOT_DOME_FOSSIL
+	goto_if_eq VAR_RESULT, 0, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonParty
+	goto_if_eq VAR_RESULT, 1, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonPC
+	end
+CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveKabuto_NoItem:
+	givemon SPECIES_KABUTO, 20
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	setflag FLAG_REVIVED_DOME
+	setflag FLAG_GOT_HELIX_FOSSIL
 	goto_if_eq VAR_RESULT, 0, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonParty
 	goto_if_eq VAR_RESULT, 1, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonPC
 	end
@@ -220,7 +251,7 @@ CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_GiveAerodactyl::
 	setvar VAR_TEMP_1, SPECIES_AERODACTYL
 	bufferspeciesname STR_VAR_1, SPECIES_AERODACTYL
 	msgbox CinnabarIsland_PokemonLab_ExperimentRoom_Text_FossilMonBackToLife
-	givemon SPECIES_AERODACTYL, 5
+	givemon SPECIES_AERODACTYL, 20
 	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
 	setflag FLAG_REVIVED_AMBER
 	goto_if_eq VAR_RESULT, 0, CinnabarIsland_PokemonLab_ExperimentRoom_EventScript_NicknameMonParty

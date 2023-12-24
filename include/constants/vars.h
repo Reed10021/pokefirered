@@ -85,21 +85,28 @@
 // Used by Quest Log.
 #define VAR_QUEST_LOG_MON_COUNTS           0x4027
 #define VAR_WONDER_NEWS_STEP_COUNTER       0x4028
-#define VAR_0x4029                         0x4029
-#define VAR_0x402A                         0x402A
-#define VAR_0x402B                         0x402B
-#define VAR_0x402C                         0x402C
-#define VAR_0x402D                         0x402D
-#define VAR_0x402E                         0x402E
-
-#define VAR_0x402F                         0x402F
+//#define VAR_0x4029                       0x4029
+//#define VAR_0x402A                       0x402A
+//#define VAR_0x402B                       0x402B
+//#define VAR_0x402C                       0x402C
+//#define VAR_0x402D                       0x402D
+//#define VAR_0x402E                       0x402E
+//#define VAR_0x402F                       0x402F
+#define VAR_EGG_CHAIN                      0x4029
+#define VAR_EGG_CHAIN_PARENT_1             0x402A
+#define VAR_EGG_CHAIN_PARENT_2             0x402B
+#define VAR_REGISTERED_L_ITEM              0x402C
+#define VAR_REGISTERED_R_ITEM              0x402D
+#define VAR_CHAIN                          0x402E
+#define VAR_SPECIESCHAINED                 0x402F
 
 #define VAR_ICE_STEP_COUNT                 0x4030
 #define VAR_STARTER_MON                    0x4031 // 0: Bulbasaur, 1: Squirtle, 2: Charmander
 #define VAR_RESET_RTC_ENABLE               0x4032
 #define VAR_ENIGMA_BERRY_AVAILABLE         0x4033
 
-#define VAR_0x4034                         0x4034
+//#define VAR_0x4034                       0x4034
+#define VAR_REPEL_LAST_USED                0x4034
 #define VAR_RESORT_GOREGEOUS_STEP_COUNTER  0x4035
 #define VAR_RESORT_GORGEOUS_REQUESTED_MON  0x4036
 #define VAR_PC_BOX_TO_SEND_MON             0x4037
@@ -110,9 +117,10 @@
 #define VAR_0x403C                         0x403C // Set to 0x0302, never read
 #define VAR_HERACROSS_SIZE_RECORD          0x403D
 #define VAR_DEOXYS_INTERACTION_NUM         0x403E
-#define VAR_0x403F                         0x403F
+#define VAR_DAYS                           0x403F
 #define VAR_MAGIKARP_SIZE_RECORD           0x4040
-#define VAR_0x4041                         0x4041
+//#define VAR_0x4041                       0x4041
+#define VAR_POKELOT_RND1                   0x4041
 #define VAR_TRAINER_CARD_MON_ICON_TINT_IDX 0x4042
 #define VAR_TRAINER_CARD_MON_ICON_1        0x4043
 #define VAR_TRAINER_CARD_MON_ICON_2        0x4044
@@ -190,19 +198,30 @@
 #define VAR_MAP_SCENE_CINNABAR_ISLAND_2                                        0x408A
 #define VAR_MAP_SCENE_MT_MOON_B2F                                              0x408B
 
-
-#define VAR_0x408C                 0x408C
-#define VAR_0x408D                 0x408D
-#define VAR_0x408E                 0x408E
-#define VAR_0x408F                 0x408F
-#define VAR_0x4090                 0x4090
-#define VAR_0x4091                 0x4091
-#define VAR_0x4092                 0x4092
-#define VAR_0x4093                 0x4093
-#define VAR_0x4094                 0x4094
-#define VAR_0x4095                 0x4095
-#define VAR_0x4096                 0x4096
-#define VAR_0x4097                 0x4097
+//#define VAR_0x408C               0x408C
+//#define VAR_0x408D               0x408D
+//#define VAR_0x408E               0x408E
+//#define VAR_0x408F               0x408F
+//#define VAR_0x4090               0x4090
+//#define VAR_0x4091               0x4091
+//#define VAR_0x4092               0x4092
+//#define VAR_0x4093               0x4093
+//#define VAR_0x4094               0x4094
+//#define VAR_0x4095               0x4095
+//#define VAR_0x4096               0x4096
+//#define VAR_0x4097                 0x4097
+#define VAR_POKELOT_PRIZE_ITEM     0x408C
+#define VAR_POKELOT_PRIZE_PLACE    0x408D
+#define VAR_POKELOT_PRIZE_COUNT    0x408E
+#define VAR_OUTBREAK_LEVEL         0x408F
+#define VAR_OUTBREAK_SPECIES       0x4090
+#define VAR_OUTBREAK_MOVE_1        0x4091
+#define VAR_OUTBREAK_MOVE_2        0x4092
+#define VAR_OUTBREAK_MOVE_3        0x4093
+#define VAR_OUTBREAK_MOVE_4        0x4094
+#define VAR_OUTBREAK_LOCATION      0x4095
+#define VAR_OUTBREAK_LOCATION_MAP  0x4096
+#define VAR_YESTERDAYS_OUTBREAK    0x4097
 #define VAR_0x4098                 0x4098
 #define VAR_0x4099                 0x4099
 #define VAR_0x409A                 0x409A

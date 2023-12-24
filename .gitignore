@@ -44,6 +44,7 @@ ld_script_ruby.txt
 ld_script_sapphire.txt
 sound/**/*.bin
 sound/songs/midi/*.s
+!sound/songs/midi/se_low_health.s
 src/data/items.h
 src/data/wild_encounters.h
 src/data/region_map/region_map_entries.h
@@ -61,3 +62,4 @@ prefabs.json
 .vscode/*.*
 *.js
 *.sym
+/.vs

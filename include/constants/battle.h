@@ -350,6 +350,10 @@
 #define B_WIN_VS_OUTCOME_LEFT    22
 #define B_WIN_VS_OUTCOME_RIGHT   23
 #define B_WIN_OAK_OLD_MAN        24
+#define B_WIN_SUPER_EFFECTIVE    25
+#define B_WIN_NOT_VERY_EFFECTIVE 26
+#define B_WIN_NOT_EFFECTIVE      27
+#define B_WIN_MOVE_DESC          28
 
 #define B_TEXT_FLAG_NPC_CONTEXT_FONT    (1 << 6)
 #define B_TEXT_FLAG_WINDOW_CLEAR        (1 << 7)

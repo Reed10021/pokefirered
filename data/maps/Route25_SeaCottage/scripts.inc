@@ -146,7 +146,7 @@ Route25_SeaCottage_Movement_BillEnterTeleporter::
 
 Route25_SeaCottage_EventScript_Computer::
 	lockall
-	goto_if_set RETURN_AFTER_SS_TICKET, Route25_SeaCottage_EventScript_OpenBillsMonList
+	goto_if_set RETURN_AFTER_SS_TICKET, Route25_SeaCottage_EventScript_SelfTrade
 	goto_if_set BILL_IN_TELEPORTER, Route25_SeaCottage_EventScript_RunCellSeparator
 	msgbox Route25_SeaCottage_Text_TeleporterIsDisplayed
 	releaseall
@@ -241,6 +241,8 @@ Route25_SeaCottage_EventScript_BillsMonList::
 	case 1, Route25_SeaCottage_EventScript_ViewFlareon
 	case 2, Route25_SeaCottage_EventScript_ViewJolteon
 	case 3, Route25_SeaCottage_EventScript_ViewVaporeon
+@	case 4, Route25_SeaCottage_EventScript_ViewEspeon
+@	case 5, Route25_SeaCottage_EventScript_ViewUmbreon
 	case 4, Route25_SeaCottage_EventScript_ExitBillsMonList
 	case 127, Route25_SeaCottage_EventScript_ExitBillsMonList
 	end
@@ -251,7 +253,7 @@ Route25_SeaCottage_EventScript_ViewEevee::
 	hidemonpic
 	setvar VAR_0x8004, SPECIES_EEVEE
 	special SetSeenMon
-	goto Route25_SeaCottage_EventScript_BillsMonList
+@	goto Route25_SeaCottage_EventScript_BillsMonList
 	end
 
 Route25_SeaCottage_EventScript_ViewFlareon::
@@ -260,7 +262,7 @@ Route25_SeaCottage_EventScript_ViewFlareon::
 	hidemonpic
 	setvar VAR_0x8004, SPECIES_FLAREON
 	special SetSeenMon
-	goto Route25_SeaCottage_EventScript_BillsMonList
+@	goto Route25_SeaCottage_EventScript_BillsMonList
 	end
 
 Route25_SeaCottage_EventScript_ViewJolteon::
@@ -269,7 +271,7 @@ Route25_SeaCottage_EventScript_ViewJolteon::
 	hidemonpic
 	setvar VAR_0x8004, SPECIES_JOLTEON
 	special SetSeenMon
-	goto Route25_SeaCottage_EventScript_BillsMonList
+@	goto Route25_SeaCottage_EventScript_BillsMonList
 	end
 
 Route25_SeaCottage_EventScript_ViewVaporeon::
@@ -278,11 +280,83 @@ Route25_SeaCottage_EventScript_ViewVaporeon::
 	hidemonpic
 	setvar VAR_0x8004, SPECIES_VAPOREON
 	special SetSeenMon
-	goto Route25_SeaCottage_EventScript_BillsMonList
+@	goto Route25_SeaCottage_EventScript_BillsMonList
+	end
+
+Route25_SeaCottage_EventScript_ViewEspeon::
+	showmonpic SPECIES_ESPEON, 10, 3
+	waitbuttonpress
+	hidemonpic
+	setvar VAR_0x8004, SPECIES_ESPEON
+	special SetSeenMon
+@	goto Route25_SeaCottage_EventScript_BillsMonList
+	end
+
+Route25_SeaCottage_EventScript_ViewUmbreon::
+	showmonpic SPECIES_UMBREON, 10, 3
+	waitbuttonpress
+	hidemonpic
+	setvar VAR_0x8004, SPECIES_UMBREON
+	special SetSeenMon
+@	goto Route25_SeaCottage_EventScript_BillsMonList
 	end
 
 Route25_SeaCottage_EventScript_ExitBillsMonList::
 	releaseall
+	end
+
+Route25_SeaCottage_EventScript_SelfTrade::
+	msgbox Route25_SeaCottage_Text_SelfTrade_AskPlayer, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq Route25_SeaCottage_EventScript_SelfTrade_EndTrade
+	special ChoosePartyMon
+	waitstate
+	goto_if_ge VAR_0x8004, PARTY_SIZE, Route25_SeaCottage_EventScript_SelfTrade_EndTrade
+	copyvar VAR_0x8005, VAR_0x8004
+	special CheckMonEvolvesByTrade
+	goto_if_eq VAR_0x8004, 0, Route25_SeaCottage_EventScript_SelfTrade_TradeNoEffect
+
+	special SpawnCameraObject
+	applymovement OBJ_EVENT_ID_CAMERA, Route25_SeaCottage_Movement_CameraPanToTeleporters
+	waitmovement 0
+	delay 35
+	playse SE_PIN
+	waitse
+	setvar VAR_0x8004, 0
+	special AnimateTeleporterHousing
+	delay 10
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	setvar VAR_0x8004, 1
+	special AnimateTeleporterHousing
+	playse SE_WARP_IN
+	special AnimateTeleporterCable
+	waitse
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	call Route25_SeaCottage_EventScript_PlayTeleporterBeepSE
+	applymovement OBJ_EVENT_ID_CAMERA, Route25_SeaCottage_Movement_CameraPanBackFromTeleporters
+	waitmovement 0
+	special RemoveCameraObject
+	special EvolveMonByTrade
+	waitstate
+	release
+	end
+
+Route25_SeaCottage_EventScript_SelfTrade_EndTrade::
+	release
+	end
+
+Route25_SeaCottage_EventScript_SelfTrade_TradeNoEffect::
+	msgbox Route25_SeaCottage_Text_SelfTrade_NoEffect, MSGBOX_DEFAULT
+	release
 	end
 
 Route25_SeaCottage_Movement_BillWalkToMiddleOfRoom::

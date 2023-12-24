@@ -618,6 +618,10 @@ FourIsland_IcefallCave_1F_EventScript_ItemHM07::
 	finditem ITEM_HM07
 	end
 
+FourIsland_IcefallCave_B1F_EventScript_ItemHM08::
+	finditem ITEM_HM08
+	end
+
 FourIsland_IcefallCave_B1F_EventScript_ItemFullRestore::
 	finditem ITEM_FULL_RESTORE
 	end

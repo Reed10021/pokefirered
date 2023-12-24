@@ -1620,7 +1620,7 @@ u8 CastformDataTypeChange(u8 battler)
     }
     if (!WEATHER_HAS_EFFECT)
         return CASTFORM_NO_CHANGE;
-    if (!(gBattleWeather & (B_WEATHER_RAIN | B_WEATHER_SUN | B_WEATHER_HAIL)) && !IS_BATTLER_OF_TYPE(battler, TYPE_NORMAL))
+    if (!(gBattleWeather & (B_WEATHER_ANY)) && !IS_BATTLER_OF_TYPE(battler, TYPE_NORMAL))
     {
         SET_BATTLER_TYPE(battler, TYPE_NORMAL);
         formChange = CASTFORM_TO_NORMAL;
@@ -1639,6 +1639,12 @@ u8 CastformDataTypeChange(u8 battler)
     {
         SET_BATTLER_TYPE(battler, TYPE_ICE);
         formChange = CASTFORM_TO_ICE;
+    }
+    // Castform doesn't have a specific form for Rock type, but still change his type to Rock so it gets weather ball STAB.
+    if (gBattleWeather & B_WEATHER_SANDSTORM && !IS_BATTLER_OF_TYPE(battler, TYPE_ROCK))
+    {
+        SET_BATTLER_TYPE(battler, TYPE_ROCK);
+        formChange = CASTFORM_TO_NORMAL; //hacky
     }
     return formChange;
 }
@@ -1734,6 +1740,15 @@ u8 AbilityBattleEffects(u8 caseID, u8 battler, u8 ability, u8 special, u16 moveA
                     {
                         gBattleWeather = B_WEATHER_SUN;
                         gBattleScripting.animArg1 = B_ANIM_SUN_CONTINUES;
+                        gBattleScripting.battler = battler;
+                        effect++;
+                    }
+                    break;
+                case WEATHER_SNOW:
+                    if (!(gBattleWeather & B_WEATHER_HAIL))
+                    {
+                        gBattleWeather = B_WEATHER_HAIL;
+                        gBattleScripting.animArg1 = B_ANIM_HAIL_CONTINUES;
                         gBattleScripting.battler = battler;
                         effect++;
                     }
@@ -1997,6 +2012,8 @@ u8 AbilityBattleEffects(u8 caseID, u8 battler, u8 ability, u8 special, u16 moveA
             case ABILITY_EFFECT_SPORE:
                 if (!(gMoveResultFlags & MOVE_RESULT_NO_EFFECT)
                  && gBattleMons[gBattlerAttacker].hp != 0
+                 && gBattleMons[battler].type1 != TYPE_GRASS
+                 && gBattleMons[battler].type2 != TYPE_GRASS
                  && !gProtectStructs[gBattlerAttacker].confusionSelfDmg
                  && TARGET_TURN_DAMAGED
                  && (gBattleMoves[move].flags & FLAG_MAKES_CONTACT)
@@ -2532,9 +2549,9 @@ u8 ItemBattleEffects(u8 caseID, u8 battlerId, bool8 moveTurn)
     case ITEMEFFECT_ON_SWITCH_IN:
         switch (battlerHoldEffect)
         {
-        case HOLD_EFFECT_DOUBLE_PRIZE:
-            gBattleStruct->moneyMultiplier = 2;
-            break;
+        //case HOLD_EFFECT_DOUBLE_PRIZE:
+        //    gBattleStruct->moneyMultiplier = 2;
+        //    break;
         case HOLD_EFFECT_RESTORE_STATS:
             for (i = 0; i < NUM_BATTLE_STATS; i++)
             {
@@ -3136,7 +3153,13 @@ static bool32 IsBattlerModernFatefulEncounter(u8 battlerId)
         return TRUE;
     if (GetMonData(&gPlayerParty[gBattlerPartyIndexes[battlerId]], MON_DATA_SPECIES, NULL) != SPECIES_DEOXYS
         && GetMonData(&gPlayerParty[gBattlerPartyIndexes[battlerId]], MON_DATA_SPECIES, NULL) != SPECIES_MEW)
-            return TRUE;
+        return TRUE;
+    // If Deoxys or Mew, then we get to this line of code and add the legality bit to their pokedata.
+    // If not Deoxys or Mew, then we never reach this line because of the above line.
+    if (!GetMonData(&gPlayerParty[gBattlerPartyIndexes[battlerId]], MON_DATA_MODERN_FATEFUL_ENCOUNTER, NULL)) {
+        bool32 isEventLegal = TRUE;
+        SetMonData(&gPlayerParty[gBattlerPartyIndexes[battlerId]], MON_DATA_MODERN_FATEFUL_ENCOUNTER, &isEventLegal);
+    }
     return GetMonData(&gPlayerParty[gBattlerPartyIndexes[battlerId]], MON_DATA_MODERN_FATEFUL_ENCOUNTER, NULL);
 }
 
@@ -3160,12 +3183,20 @@ u8 IsMonDisobedient(void)
 
         obedienceLevel = 10;
 
+        if (FlagGet(FLAG_BADGE01_GET))
+            obedienceLevel = 20;
         if (FlagGet(FLAG_BADGE02_GET))
             obedienceLevel = 30;
+        if (FlagGet(FLAG_BADGE03_GET))
+            obedienceLevel = 40;
         if (FlagGet(FLAG_BADGE04_GET))
             obedienceLevel = 50;
+        if (FlagGet(FLAG_BADGE05_GET))
+            obedienceLevel = 60;
         if (FlagGet(FLAG_BADGE06_GET))
             obedienceLevel = 70;
+        if (FlagGet(FLAG_BADGE07_GET))
+            obedienceLevel = 80;
     }
 
     if (gBattleMons[gBattlerAttacker].level <= obedienceLevel)

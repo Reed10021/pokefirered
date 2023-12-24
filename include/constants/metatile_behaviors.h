@@ -36,6 +36,11 @@
 #define MB_ROCK_STAIRS 0x2A
 #define MB_SAND_CAVE 0x2B
 //
+#define MB_UNUSED_2C 0x2C
+#define MB_UNUSED_2D 0x2D
+#define MB_UNUSED_2E 0x2E
+#define MB_UNUSED_2F 0x2F
+//
 #define MB_IMPASSABLE_EAST 0x30
 #define MB_IMPASSABLE_WEST 0x31
 #define MB_IMPASSABLE_NORTH 0x32

@@ -58,6 +58,8 @@ extern u8 gExitStairsMovementDisabled;
 extern u8 gFieldLinkPlayerCount;
 extern u8 gLocalLinkPlayerId;
 
+extern bool8 gSysPcFromStartMenu;
+
 void IncrementGameStat(u8 index);
 
 void SetObjEventTemplateCoords(u8, s16, s16);
@@ -95,6 +97,7 @@ void WarpIntoMap(void);
 u8 GetMapTypeByGroupAndId(s8 mapGroup, s8 mapNum);
 void SetWarpDestinationToMapWarp(s8 mapGroup, s8 mapNum, s8 warpNum);
 void SetWarpDestinationToDynamicWarp(u8 unused);
+void InitCurrentFlashLevelScanlineEffect(void);
 
 u32 GetGameStat(u8 statId);
 void SetGameStat(u8 statId, u32 value);

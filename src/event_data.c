@@ -34,6 +34,8 @@ EWRAM_DATA u16 gSpecialVar_TextColor = 0;
 EWRAM_DATA u16 gSpecialVar_PrevTextColor = 0;
 EWRAM_DATA u16 gSpecialVar_0x8014 = 0;
 EWRAM_DATA u8 sSpecialFlags[SPECIAL_FLAGS_SIZE] = {};
+#define NUM_DAILY_FLAGS   (DAILY_FLAGS_END - DAILY_FLAGS_START + 1)
+#define DAILY_FLAGS_SIZE    (NUM_DAILY_FLAGS / 8)
 
 u16 gLastQuestLogStoredFlagOrVarIdx;
 
@@ -55,6 +57,11 @@ void ClearTempFieldEventData(void)
     FlagClear(FLAG_SYS_USE_STRENGTH);
     FlagClear(FLAG_SYS_SPECIAL_WILD_BATTLE);
     FlagClear(FLAG_SYS_INFORMED_OF_LOCAL_WIRELESS_PLAYER);
+}
+
+void ClearDailyFlags(void)
+{
+    memset(gSaveBlock1Ptr->flags + (DAILY_FLAGS_START / 8), 0, DAILY_FLAGS_SIZE);
 }
 
 // Unused
@@ -106,12 +113,12 @@ void EnableNationalPokedex(void)
 
 bool32 IsNationalPokedexEnabled(void)
 {
-    if (gSaveBlock2Ptr->pokedex.nationalMagic == 0xB9
-            && VarGet(VAR_NATIONAL_DEX) == 0x6258
-            && FlagGet(FLAG_SYS_NATIONAL_DEX))
+    //if (gSaveBlock2Ptr->pokedex.nationalMagic == 0xB9
+    //        && VarGet(VAR_NATIONAL_DEX) == 0x6258
+    //        && FlagGet(FLAG_SYS_NATIONAL_DEX))
         return TRUE;
 
-    return FALSE;
+    //return FALSE;
 }
 
 void DisableMysteryGift(void)

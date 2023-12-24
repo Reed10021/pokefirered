@@ -83,7 +83,7 @@ BirthIsland_Exterior_EventScript_Deoxys::
 	delay 40
 	waitmoncry
 	setvar VAR_LAST_TALKED, LOCALID_DEOXYS
-	seteventmon SPECIES_DEOXYS, 30
+	seteventmon SPECIES_DEOXYS, 50, ITEM_STARF_BERRY
 	setflag FLAG_SYS_SPECIAL_WILD_BATTLE
 	special StartLegendaryBattle
 	waitstate
@@ -93,18 +93,29 @@ BirthIsland_Exterior_EventScript_Deoxys::
 	goto_if_eq VAR_RESULT, B_OUTCOME_RAN, BirthIsland_Exterior_EventScript_RanFromDeoxys
 	goto_if_eq VAR_RESULT, B_OUTCOME_PLAYER_TELEPORTED, BirthIsland_Exterior_EventScript_RanFromDeoxys
 	setflag FLAG_FOUGHT_DEOXYS
+	call BirthIsland_Exterior_EventScript_Ticket
 	release
 	end
 
 BirthIsland_Exterior_EventScript_DefeatedDeoxys::
 	setflag FLAG_DEOXYS_FLEW_AWAY
 	setvar VAR_0x8004, SPECIES_DEOXYS
-	goto EventScript_MonFlewAway
+	call EventScript_MonFlewAway
+	call BirthIsland_Exterior_EventScript_Ticket
 	end
 
 BirthIsland_Exterior_EventScript_RanFromDeoxys::
 	setvar VAR_0x8004, SPECIES_DEOXYS
 	goto EventScript_MonFlewAway
+	end
+
+BirthIsland_Exterior_EventScript_Ticket::
+	checkitem ITEM_MYSTIC_TICKET
+	goto_if_eq VAR_RESULT, TRUE, BirthIsland_Exterior_EventScript_DefeatedDeoxys_No_Ticket
+	msgbox BirthIsland_Exterior_Text_DefeatedDeoxys_SomethingOnTheGround, MSGBOX_DEFAULT
+	giveitem ITEM_MYSTIC_TICKET
+	setflag FLAG_ENABLE_SHIP_NAVEL_ROCK
+BirthIsland_Exterior_EventScript_DefeatedDeoxys_No_Ticket:
 	end
 
 Movement_DeoxysApproach:
@@ -116,3 +127,8 @@ Movement_DeoxysApproach:
 	walk_slower_down
 	walk_slower_down
 	step_end
+
+
+BirthIsland_Exterior_Text_DefeatedDeoxys_SomethingOnTheGround:
+	.string "... \n"
+	.string "Huh? Something is on the ground!$"

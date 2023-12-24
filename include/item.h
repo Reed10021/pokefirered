@@ -41,9 +41,8 @@ enum {
 extern const struct Item gItems[];
 extern struct BagPocket gBagPockets[];
 
-void GetBerryCountString(u8 *dst, const u8 *berryName, u32 quantity);
+u16 GetBagItemQuantity(u16* quantity);
 void CopyItemName(u16 itemId, u8 *string);
-void CopyItemNameHandlePlural(u16 itemId, u8 *string, u32 quantity);
 bool8 IsBagPocketNonEmpty(u8 pocket);
 bool8 CheckBagHasItem(u16 itemId, u16 count);
 bool8 CheckBagHasSpace(u16 itemId, u16 count);
@@ -51,6 +50,7 @@ bool8 RemoveBagItem(u16 itemId, u16 count);
 u8 GetPocketByItemId(u16 itemId);
 void ClearItemSlots(struct ItemSlot *itemSlots, u8 b);
 u8 CountUsedPCItemSlots(void);
+bool8 CheckPCHasSpace(u16 itemId, u16 count);
 bool8 CheckPCHasItem(u16 itemId, u16 count);
 bool8 AddPCItem(u16 itemId, u16 count);
 void SwapRegisteredBike(void);
@@ -59,6 +59,7 @@ u16 ItemId_GetId(u16 itemId);
 u16 ItemId_GetPrice(u16 itemId);
 u8 ItemId_GetHoldEffect(u16 itemId);
 u8 ItemId_GetHoldEffectParam(u16 itemId);
+void ItemId_GetHoldEffectParam_Script();
 const u8 *ItemId_GetDescription(u16 itemId);
 bool32 ItemId_CopyDescription(u8 *a, u32 itemId, u32 c);
 u8 ItemId_GetImportance(u16 itemId);

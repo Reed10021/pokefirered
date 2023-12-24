@@ -3,6 +3,7 @@
 #include "script.h"
 #include "task.h"
 #include "data.h"
+#include "decompress.h"
 #include "trig.h"
 #include "field_fadetransition.h"
 #include "overworld.h"
@@ -11,6 +12,7 @@
 #include "list_menu.h"
 #include "event_data.h"
 #include "text_window.h"
+#include "party_menu.h"
 #include "pokemon_summary_screen.h"
 #include "graphics.h"
 #include "strings.h"
@@ -148,6 +150,7 @@ struct LearnMoveGfxResources
     u8 selectedIndex;
     u16 listMenuScrollPos;
     u16 listMenuScrollRow;
+    u8 splitIconSpriteId; // Physical/Special/Status type
 };
 
 static EWRAM_DATA struct LearnMoveGfxResources * sMoveRelearner = NULL;
@@ -251,7 +254,7 @@ static const struct BgTemplate sBgTemplates[2] = {
     }
 };
 
-static const struct WindowTemplate sWindowTemplates[9] = {
+static const struct WindowTemplate sWindowTemplates[10] = {
     {
         .bg = 0,
         .tilemapLeft = 0,
@@ -323,6 +326,15 @@ static const struct WindowTemplate sWindowTemplates[9] = {
         .height = 4,
         .paletteNum = 15,
         .baseBlock = 0x169
+    }, 
+    {
+        .bg = 0,
+        .tilemapLeft = 7,
+        .tilemapTop = 2,
+        .width = 2,
+        .height = 2,
+        .paletteNum = 10,
+        .baseBlock = 0x1d1
     }, DUMMY_WIN_TEMPLATE
 };
 
@@ -333,7 +345,7 @@ static const struct WindowTemplate sMoveRelearnerYesNoMenuTemplate = {
     .width = 6,
     .height = 4,
     .paletteNum = 15,
-    .baseBlock = 0x1d1
+    .baseBlock = 0x1d5
 };
 
 static const struct ListMenuTemplate sMoveRelearnerListMenuTemplate = {
@@ -395,6 +407,9 @@ static void MoveRelearnerLoadBgGfx(void)
             ClearWindowTilemap(i);
             FillWindowPixelBuffer(i, PIXEL_FILL(0));
         }
+        // category
+        LoadPalette(sSplitIcons_Pal, 10 * 0x10, 0x20);
+
         FillWindowPixelBuffer(7, PIXEL_FILL(1));
         FillBgTilemapBufferRect(0, 0x000, 0, 0, 30, 20, 15);
         SetBgTilemapBuffer(1, sMoveRelearner->bg1TilemapBuffer);
@@ -423,6 +438,10 @@ static void CB2_MoveRelearner_Init(void)
     MoveRelearnerInitListMenuBuffersEtc();
     SetVBlankCallback(VBlankCB_MoveRelearner);
     MoveRelearnerLoadBgGfx();
+
+    //LoadCompressedSpriteSheet(&sSpriteSheet_SplitIcons);
+    //LoadSpritePalette(&sSpritePal_SplitIcons);
+
     SpawnListMenuScrollIndicatorSprites();
     RunTasks();
     AnimateSprites();
@@ -580,10 +599,10 @@ static void MoveRelearnerStateMachine(void)
         switch (YesNoMenuProcessInput())
         {
         case 0:
+        case -1:
             sMoveRelearner->state = 27;
             break;
         case 1:
-        case -1:
             sMoveRelearner->state = 16;
             break;
         }
@@ -619,7 +638,16 @@ static void MoveRelearnerStateMachine(void)
         {
             FreeAllWindowBuffers();
             Free(sMoveRelearner);
-            SetMainCallback2(CB2_ReturnToField);
+            //SetMainCallback2(CB2_ReturnToField);
+            if (FlagGet(FLAG_PARTY_MOVES))
+            {
+                CB2_ReturnToPartyMenuFromSummaryScreen();
+                FlagClear(FLAG_PARTY_MOVES);
+            }
+            else
+            {
+                SetMainCallback2(CB2_ReturnToField);
+            }
         }
         break;
     case MENU_STATE_FADE_FROM_SUMMARY_SCREEN:
@@ -828,7 +856,14 @@ static void PrintMoveInfo(u16 move)
         PrintTextOnWindow(3, buffer, 1, 4, 0, 0);
     }
 
-    if (gBattleMoves[move].accuracy == 0)
+    if (gBattleMoves[move].accuracy == 0 ||
+        move == MOVE_ASSIST || move == MOVE_BLOCK || move == MOVE_CAMOUFLAGE || move == MOVE_CHARGE ||
+        move == MOVE_CONVERSION_2 || move == MOVE_FOLLOW_ME || move == MOVE_GRUDGE || move == MOVE_HELPING_HAND ||
+        move == MOVE_IMPRISON || move == MOVE_INGRAIN || move == MOVE_MAGIC_COAT || move == MOVE_MEAN_LOOK ||
+        move == MOVE_MEMENTO || move == MOVE_MIMIC || move == MOVE_MUD_SPORT || move == MOVE_NIGHTMARE ||
+        move == MOVE_PAIN_SPLIT || move == MOVE_RECYCLE || move == MOVE_REFRESH || move == MOVE_ROLE_PLAY ||
+        move == MOVE_SKILL_SWAP || move == MOVE_SLACK_OFF || move == MOVE_SNATCH || move == MOVE_SOFT_BOILED ||
+        move == MOVE_SPIDER_WEB || move == MOVE_TAIL_GLOW || move == MOVE_WATER_SPORT || move == MOVE_WISH || move == MOVE_YAWN)
     {
         PrintTextOnWindow(3, gText_ThreeHyphens, 1, 18, 0, 1);
     }
@@ -840,6 +875,8 @@ static void PrintMoveInfo(u16 move)
     ConvertIntToDecimalStringN(buffer, gBattleMoves[move].pp, STR_CONV_MODE_LEFT_ALIGN, 2);
     PrintTextOnWindow(4, buffer, 2, 2, 0, 0);
     PrintTextOnWindow(5, gMoveDescriptionPointers[move - 1], 1, 0, 0, 0);
+    // category
+    BlitBitmapToWindow(8, sSplitIcons_Gfx + 0x80 * GetBattleMoveSplit(move), 0, 1, 16, 16);
 }
 
 static void LoadMoveInfoUI(void)
@@ -856,6 +893,7 @@ static void LoadMoveInfoUI(void)
     PutWindowTilemap(5);
     PutWindowTilemap(2);
     PutWindowTilemap(7);
+    PutWindowTilemap(8);
     CopyWindowToVram(0, COPYWIN_GFX);
     CopyWindowToVram(1, COPYWIN_GFX);
 }
@@ -874,6 +912,8 @@ static void PrintMoveInfoHandleCancel_CopyToVram(void)
             FillWindowPixelBuffer(i, PIXEL_FILL(0));
             CopyWindowToVram(i, COPYWIN_GFX);
         }
+        FillWindowPixelBuffer(8, PIXEL_FILL(0));
+        CopyWindowToVram(8, COPYWIN_GFX);
     }
     CopyWindowToVram(3, COPYWIN_GFX);
     CopyWindowToVram(4, COPYWIN_GFX);
@@ -881,6 +921,7 @@ static void PrintMoveInfoHandleCancel_CopyToVram(void)
     CopyWindowToVram(2, COPYWIN_GFX);
     CopyWindowToVram(5, COPYWIN_GFX);
     CopyWindowToVram(7, COPYWIN_FULL);
+    CopyWindowToVram(8, COPYWIN_GFX);
 }
 
 static void MoveRelearnerMenu_MoveCursorFunc(s32 itemIndex, bool8 onInit, struct ListMenu *list)

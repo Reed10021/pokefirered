@@ -479,7 +479,7 @@ static void Task_TryBecomeLinkLeader(u8 taskId)
         }
         break;
     case LL_STATE_MEMBER_LEFT:
-        id = (GROUP_MAX(sPlayerCurrActivity) == 2) ? 1 : 0;
+        id = (GROUP_MAX(sPlayerActivityGroupSize) == 2) ? 1 : 0;
         if (PrintOnTextbox(&data->textState, gTexts_UR_PlayerUnavailable[id]))
         {
             data->playerCount = LeaderPrunePlayerList(data->playerList);
@@ -4291,7 +4291,7 @@ static void ViewURoomPartnerTrainerCard(u8 *unused, struct WirelessLink_URoom * 
     ConvertIntToDecimalStringN(uroom->trainerCardStrBuffer[2], trainerCard->rse.caughtMonsCount, STR_CONV_MODE_LEFT_ALIGN, 3);
     DynamicPlaceholderTextUtil_SetPlaceholderPtr(3, uroom->trainerCardStrBuffer[2]);
 
-    ConvertIntToDecimalStringN(uroom->trainerCardStrBuffer[3], trainerCard->rse.playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 3);
+    ConvertIntToDecimalStringN(uroom->trainerCardStrBuffer[3], trainerCard->rse.playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 5);
     ConvertIntToDecimalStringN(uroom->trainerCardStrBuffer[4], trainerCard->rse.playTimeMinutes, STR_CONV_MODE_LEADING_ZEROS, 2);
     DynamicPlaceholderTextUtil_SetPlaceholderPtr(4, uroom->trainerCardStrBuffer[3]);
     DynamicPlaceholderTextUtil_SetPlaceholderPtr(5, uroom->trainerCardStrBuffer[4]);

@@ -169,27 +169,28 @@ s32 GetSpeciesPokedexAreaMarkers(u16 species, struct Subsprite * subsprites)
     u16 dexArea;
     s32 tableIndex;
     s32 seviiAreas;
-    s32 alteringCaveCount;
-    s32 alteringCaveNum;
+    //s32 alteringCaveCount;
+    //s32 alteringCaveNum;
     s32 i;
 
     if (GetRoamerIndex(species) >= 0)
         return GetRoamerPokedexAreaMarkers(species, subsprites);
 
     seviiAreas = GetUnlockedSeviiAreas();
-    alteringCaveCount = 0;
-    alteringCaveNum = VarGet(VAR_ALTERING_CAVE_WILD_SET);
-    if (alteringCaveNum >= NUM_ALTERING_CAVE_TABLES)
-        alteringCaveNum = 0;
+    // Allow all altering cave variations to be parsed.
+    //alteringCaveCount = 0;
+    //alteringCaveNum = VarGet(VAR_ALTERING_CAVE_WILD_SET);
+    //if (alteringCaveNum >= NUM_ALTERING_CAVE_TABLES)
+    //    alteringCaveNum = 0;
     for (i = 0, areaCount = 0; gWildMonHeaders[i].mapGroup != MAP_GROUP(UNDEFINED); i++)
     {
         mapSecId = GetMapSecIdFromWildMonHeader(&gWildMonHeaders[i]);
-        if (mapSecId == MAPSEC_ALTERING_CAVE)
-        {
-            alteringCaveCount++;
-            if (alteringCaveNum != alteringCaveCount - 1)
-                continue;
-        }
+        //if (mapSecId == MAPSEC_ALTERING_CAVE)
+        //{
+        //    alteringCaveCount++;
+        //    if (alteringCaveNum != alteringCaveCount - 1)
+        //        continue;
+        //}
         if (IsSpeciesOnMap(&gWildMonHeaders[i], species))
         {
             // Search for all dex areas associated with this MAPSEC.
@@ -243,7 +244,7 @@ static s32 GetRoamerPokedexAreaMarkers(u16 species, struct Subsprite * subsprite
     roamerIdx = GetRoamerIndex(species);
     if (roamerIdx < 0)
         return 0;
-    if (sRoamerPairs[roamerIdx].starter != GetStarterSpecies())
+    if (sRoamerPairs[roamerIdx].roamer != GetRoamerSpecies())
         return 0;
 
     mapSecId = GetRoamerLocationMapSectionId();
@@ -274,6 +275,10 @@ static bool32 IsSpeciesOnMap(const struct WildPokemonHeader * data, s32 species)
 #endif
         return TRUE;
     if (IsSpeciesInEncounterTable(data->rockSmashMonsInfo, species, ROCK_WILD_COUNT))
+        return TRUE;
+    if(VarGet(VAR_OUTBREAK_SPECIES) == species &&
+        data->mapNum == VarGet(VAR_OUTBREAK_LOCATION) && 
+        data->mapGroup == 3)
         return TRUE;
 
     return FALSE;

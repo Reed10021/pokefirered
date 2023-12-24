@@ -1,5 +1,7 @@
 #include "global.h"
 #include "gflib.h"
+#include "clock.h"
+#include "rtc.h"
 #include "script.h"
 #include "mystery_event_script.h"
 #include "event_data.h"
@@ -487,6 +489,15 @@ bool8 ScrCmd_checkitemspace(struct ScriptContext * ctx)
     return FALSE;
 }
 
+bool8 ScrCmd_checkpcspace(struct ScriptContext* ctx)
+{
+    u16 itemId = VarGet(ScriptReadHalfword(ctx));
+    u32 quantity = VarGet(ScriptReadHalfword(ctx));
+
+    gSpecialVar_Result = CheckPCHasSpace(itemId, (u8)quantity);
+    return FALSE;
+}
+
 bool8 ScrCmd_checkitem(struct ScriptContext * ctx)
 {
     u16 itemId = VarGet(ScriptReadHalfword(ctx));
@@ -656,28 +667,25 @@ bool8 ScrCmd_delay(struct ScriptContext * ctx)
 
 bool8 ScrCmd_initclock(struct ScriptContext * ctx)
 {
-//    u8 hour = VarGet(ScriptReadHalfword(ctx));
-//    u8 minute = VarGet(ScriptReadHalfword(ctx));
-//
-//    RtcInitLocalTimeOffset(hour, minute);
+    u8 hour = VarGet(ScriptReadHalfword(ctx));
+    u8 minute = VarGet(ScriptReadHalfword(ctx));
+
+    RtcInitLocalTimeOffset(hour, minute);
     return FALSE;
 }
 
 bool8 ScrCmd_dotimebasedevents(struct ScriptContext * ctx)
 {
-//    DoTimeBasedEvents();
+    DoTimeBasedEvents();
     return FALSE;
 }
 
 bool8 ScrCmd_gettime(struct ScriptContext * ctx)
 {
-//    RtcCalcLocalTime();
-//    gSpecialVar_0x8000 = gLocalTime.hours;
-//    gSpecialVar_0x8001 = gLocalTime.minutes;
-//    gSpecialVar_0x8002 = gLocalTime.seconds;
-    gSpecialVar_0x8000 = 0;
-    gSpecialVar_0x8001 = 0;
-    gSpecialVar_0x8002 = 0;
+    RtcCalcLocalTime();
+    gSpecialVar_0x8000 = gLocalTime.hours;
+    gSpecialVar_0x8001 = gLocalTime.minutes;
+    gSpecialVar_0x8002 = gLocalTime.seconds;
     return FALSE;
 }
 
@@ -1404,6 +1412,31 @@ bool8 ScrCmd_waitbuttonpress(struct ScriptContext * ctx)
     if (QL_GetPlaybackState() == QL_PLAYBACK_STATE_RUNNING || gQuestLogState == QL_STATE_PLAYBACK)
         sQuestLogWaitButtonPressTimer = 0;
     SetupNativeScript(ctx, WaitForAorBPress);
+    return TRUE;
+}
+
+static bool8 WaitForAnyPress(void)
+{
+    if (JOY_NEW(A_BUTTON))
+        return TRUE;
+    if (JOY_NEW(B_BUTTON))
+        return TRUE;
+    if (JOY_NEW(DPAD_ANY))
+        return TRUE;
+    if (JOY_NEW(START_BUTTON))
+        return TRUE;
+    if (JOY_NEW(SELECT_BUTTON))
+        return TRUE;
+    if (JOY_NEW(L_BUTTON))
+        return TRUE;
+    if (JOY_NEW(R_BUTTON))
+        return TRUE;
+    return FALSE;
+}
+
+bool8 ScrCmd_waitanybuttonpress(struct ScriptContext* ctx)
+{
+    SetupNativeScript(ctx, WaitForAnyPress);
     return TRUE;
 }
 

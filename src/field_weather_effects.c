@@ -10,6 +10,11 @@
 #include "constants/songs.h"
 #include "task.h"
 #include "trig.h"
+#include "constants/rgb.h"
+#include "palette.h"
+
+// EWRAM
+EWRAM_DATA u8 gCurrentAbnormalWeather = 0;
 
 //------------------------------------------------------------------------------
 // WEATHER_SUNNY_CLOUDS
@@ -280,7 +285,7 @@ static void UpdateDroughtBlend(u8 taskId)
     case 0:
         task->tBlendY = 0;
         task->tBlendDelay = 0;
-        task->tWinRange = GetGpuReg(REG_OFFSET_WININ);
+        task->tWinRange = REG_WININ;
         SetGpuReg(REG_OFFSET_WININ, WIN_RANGE(63, 63));
         SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG1 | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG3 | BLDCNT_TGT1_OBJ | BLDCNT_EFFECT_LIGHTEN);
         SetGpuReg(REG_OFFSET_BLDY, 0);
@@ -736,7 +741,7 @@ void Snow_InitVars(void)
     gWeatherPtr->weatherGfxLoaded = FALSE;
     gWeatherPtr->gammaTargetIndex = 3;
     gWeatherPtr->gammaStepDelay = 20;
-    gWeatherPtr->targetSnowflakeSpriteCount = 16;
+    gWeatherPtr->targetSnowflakeSpriteCount = 24;
     gWeatherPtr->snowflakeVisibleCounter = 0;
 }
 
@@ -901,7 +906,7 @@ static void InitSnowflakeSpriteMovement(struct Sprite *sprite)
 static void WaitSnowflakeSprite(struct Sprite *sprite)
 {
     // Timer is never incremented
-    if (gWeatherPtr->snowflakeTimer > 18)
+    if (++gWeatherPtr->snowflakeTimer > 12)
     {
         sprite->invisible = FALSE;
         sprite->callback = UpdateSnowflakeSprite;
@@ -931,31 +936,31 @@ static void UpdateSnowflakeSprite(struct Sprite *sprite)
     else if (x > 242)
         sprite->x = -3 - (gSpriteCoordOffsetX + sprite->centerToCornerVecX);
 
-    y = (sprite->y + sprite->centerToCornerVecY + gSpriteCoordOffsetY) & 0xFF;
-    if (y > 163 && y < 171)
-    {
-        sprite->y = 250 - (gSpriteCoordOffsetY + sprite->centerToCornerVecY);
-        sprite->tPosY = sprite->y * 128;
-        sprite->tFallCounter = 0;
-        sprite->tFallDuration = 220;
-    }
-    else if (y > 242 && y < 250)
-    {
-        sprite->y = 163;
-        sprite->tPosY = sprite->y * 128;
-        sprite->tFallCounter = 0;
-        sprite->tFallDuration = 220;
-        sprite->invisible = TRUE;
-        sprite->callback = WaitSnowflakeSprite;
-    }
+    //y = (sprite->y + sprite->centerToCornerVecY + gSpriteCoordOffsetY) & 0xFF;
+    //if (y > 163 && y < 171)
+    //{
+    //    sprite->y = 250 - (gSpriteCoordOffsetY + sprite->centerToCornerVecY);
+    //    sprite->tPosY = sprite->y * 128;
+    //    sprite->tFallCounter = 0;
+    //    sprite->tFallDuration = 220;
+    //}
+    //else if (y > 242 && y < 250)
+    //{
+    //    sprite->y = 163;
+    //    sprite->tPosY = sprite->y * 128;
+    //    sprite->tFallCounter = 0;
+    //    sprite->tFallDuration = 220;
+    //    sprite->invisible = TRUE;
+    //    sprite->callback = WaitSnowflakeSprite;
+    //}
 
-    if (++sprite->tFallCounter == sprite->tFallDuration)
-    {
-        InitSnowflakeSpriteMovement(sprite);
-        sprite->y = 250;
-        sprite->invisible = TRUE;
-        sprite->callback = WaitSnowflakeSprite;
-    }
+    //if (++sprite->tFallCounter == sprite->tFallDuration)
+    //{
+    //    InitSnowflakeSpriteMovement(sprite);
+    //    sprite->y = 250;
+    //    sprite->invisible = TRUE;
+    //    sprite->callback = WaitSnowflakeSprite;
+    //}
 }
 
 #undef tPosY
@@ -1004,7 +1009,7 @@ void Thunderstorm_InitVars(void)
     gWeatherPtr->targetRainSpriteCount = 16;
     gWeatherPtr->gammaTargetIndex = 3;
     gWeatherPtr->gammaStepDelay = 20;
-    gWeatherPtr->weatherGfxLoaded = FALSE;  // duplicate assignment
+    //gWeatherPtr->weatherGfxLoaded = FALSE;  // duplicate assignment
     gWeatherPtr->thunderTriggered = FALSE;
     SetRainStrengthFromSoundEffect(SE_THUNDERSTORM);
 }
@@ -1033,7 +1038,7 @@ void Downpour_InitVars(void)
     gWeatherPtr->targetRainSpriteCount = 24;
     gWeatherPtr->gammaTargetIndex = 3;
     gWeatherPtr->gammaStepDelay = 20;
-    gWeatherPtr->weatherGfxLoaded = FALSE;  // duplicate assignment
+    //gWeatherPtr->weatherGfxLoaded = FALSE;  // duplicate assignment
     SetRainStrengthFromSoundEffect(SE_DOWNPOUR);
 }
 
@@ -2344,3 +2349,74 @@ static void UpdateBubbleSprite(struct Sprite *sprite)
 #undef tScrollXCounter
 #undef tScrollXDir
 #undef tCounter
+
+//------------------------------------------------------------------------------
+// WEATHER_ABNORMAL
+//------------------------------------------------------------------------------
+
+void Task_DoAbnormalWeather(u8 taskId)
+{
+    s16* data = gTasks[taskId].data;
+
+    switch (data[0])
+    {
+    case 0:
+        if (data[15]-- <= 0)
+        {
+            SetNextWeather(data[1]);
+            gCurrentAbnormalWeather = data[1];
+            if(gCurrentAbnormalWeather == WEATHER_DROUGHT)
+                data[15] = 900;
+            else
+                data[15] = 600;
+            data[0]++;
+        }
+        break;
+    case 1:
+        if (data[15]-- <= 0)
+        {
+            SetNextWeather(data[2]);
+            gCurrentAbnormalWeather = data[2];
+            if (data[1] == WEATHER_DROUGHT)
+                data[15] = 900;
+            else
+                data[15] = 600;
+            data[15] = 600;
+            data[0] = 0;
+        }
+        break;
+    }
+}
+
+void CreateAbnormalWeatherTask(void)
+{
+    u8 taskId = CreateTask(Task_DoAbnormalWeather, 0);
+    s16* data = gTasks[taskId].data;
+
+    data[15] = 600;
+    if (gCurrentAbnormalWeather == WEATHER_DOWNPOUR)
+    {
+        data[1] = WEATHER_DROUGHT;
+        data[2] = WEATHER_DOWNPOUR;
+    }
+    else if (gCurrentAbnormalWeather == WEATHER_DROUGHT)
+    {
+        data[1] = WEATHER_DOWNPOUR;
+        data[2] = WEATHER_DROUGHT;
+    }
+    else
+    {
+        if (Random() % 2 == 0)
+        {
+            gCurrentAbnormalWeather = WEATHER_DOWNPOUR;
+            data[1] = WEATHER_DROUGHT;
+            data[2] = WEATHER_DOWNPOUR;
+        }
+        else
+        {
+            gCurrentAbnormalWeather = WEATHER_DROUGHT;
+            data[1] = WEATHER_DOWNPOUR;
+            data[2] = WEATHER_DROUGHT;
+        }
+    }
+}

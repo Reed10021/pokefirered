@@ -91,6 +91,8 @@ extern struct SaveSector gSaveDataBuffer;
 
 void ClearSaveData(void);
 void Save_ResetSaveCounters(void);
+u8 HandleThrobber(u8 throbberSpriteId, u8 flashLevel);
+void VBlankCB_Saving(void);
 u8 HandleSavingData(u8 saveType);
 u8 TrySavingData(u8 saveType);
 bool8 LinkFullSave_Init(void);

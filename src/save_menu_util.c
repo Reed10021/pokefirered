@@ -3,6 +3,7 @@
 #include "event_data.h"
 #include "pokedex.h"
 #include "region_map.h"
+#include "rtc.h"
 #include "save_menu_util.h"
 
 void SaveStatToString(u8 gameStatId, u8 *dest0, u8 color)
@@ -24,17 +25,29 @@ void SaveStatToString(u8 gameStatId, u8 *dest0, u8 color)
         break;
     case SAVE_STAT_POKEDEX:
         if (IsNationalPokedexEnabled())
-            dest = ConvertIntToDecimalStringN(dest, GetNationalPokedexCount(1), STR_CONV_MODE_LEFT_ALIGN, 3);
+        {
+            dest = ConvertIntToDecimalStringN(dest, GetNationalPokedexCount(FLAG_GET_CAUGHT), STR_CONV_MODE_LEFT_ALIGN, 3);
+            *(dest++) = CHAR_SPACE;
+            *(dest++) = CHAR_SLASH;
+            *(dest++) = CHAR_SPACE;
+            dest = ConvertIntToDecimalStringN(dest, GetNationalPokedexCount(FLAG_GET_SEEN), STR_CONV_MODE_LEFT_ALIGN, 3);
+        }
         else
-            dest = ConvertIntToDecimalStringN(dest, GetKantoPokedexCount(1), STR_CONV_MODE_LEFT_ALIGN, 3);
+        {
+            dest = ConvertIntToDecimalStringN(dest, GetKantoPokedexCount(FLAG_GET_CAUGHT), STR_CONV_MODE_LEFT_ALIGN, 3);
+            *(dest++) = CHAR_SPACE;
+            *(dest++) = CHAR_SLASH;
+            *(dest++) = CHAR_SPACE;
+            dest = ConvertIntToDecimalStringN(dest, GetKantoPokedexCount(FLAG_GET_SEEN), STR_CONV_MODE_LEFT_ALIGN, 3);
+        }
         break;
     case SAVE_STAT_TIME:
-        dest = ConvertIntToDecimalStringN(dest, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 3);
+        dest = ConvertIntToDecimalStringN(dest, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 5);
         *dest++ = CHAR_COLON;
         dest = ConvertIntToDecimalStringN(dest, gSaveBlock2Ptr->playTimeMinutes, STR_CONV_MODE_LEADING_ZEROS, 2);
         break;
     case SAVE_STAT_TIME_HR_RT_ALIGN:
-        dest = ConvertIntToDecimalStringN(dest, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_RIGHT_ALIGN, 3);
+        dest = ConvertIntToDecimalStringN(dest, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_RIGHT_ALIGN, 5);
         *dest++ = CHAR_COLON;
         dest = ConvertIntToDecimalStringN(dest, gSaveBlock2Ptr->playTimeMinutes, STR_CONV_MODE_LEADING_ZEROS, 2);
         break;
@@ -50,6 +63,12 @@ void SaveStatToString(u8 gameStatId, u8 *dest0, u8 color)
         *dest++ = nBadges + CHAR_0;
         *dest++ = 10; // 'こ'
         *dest++ = EOS;
+        break;
+    case SAVE_STAT_CLOCKTIME:
+        RtcCalcLocalTime();
+        dest = ConvertIntToDecimalStringN(dest, gLocalTime.hours, STR_CONV_MODE_LEADING_ZEROS, 2);
+        *(dest++) = CHAR_COLON;
+        dest = ConvertIntToDecimalStringN(dest, gLocalTime.minutes, STR_CONV_MODE_LEADING_ZEROS, 2);
         break;
     }
 }

@@ -2,7 +2,144 @@ CeruleanCity_House3_MapScripts::
 	.byte 0
 
 CeruleanCity_House3_EventScript_OldWoman::
+	goto_if_set FLAG_DEFEATED_MISTY, CeruleanCity_House3_EventScript_OldWoman_StarterTwo
+CeruleanCity_House3_EventScript_OldWoman_StarterTwoReceived:
 	msgbox CeruleanCity_House3_Text_PleaseTradeWithMyHusband, MSGBOX_NPC
+	end
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo:
+	goto_if_set FLAG_STARTER_TWO, CeruleanCity_House3_EventScript_OldWoman_StarterTwoReceived
+	lock
+	switch VAR_STARTER_MON
+	case 0, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Bulbasaur
+	case 1, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Squirtle
+	case 2, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Charmander
+	release
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Bulbasaur::
+	msgbox CeruleanCity_House3_Text_HavePokemonWillYouTakeIt, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq CeruleanCity_House3_EventScript_OldWoman_Decline
+	setvar VAR_TEMP_1, SPECIES_CHARMANDER
+	givemon SPECIES_CHARMANDER, 10, ITEM_CHARCOAL
+	goto_if_eq VAR_RESULT, 0, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_BulbasaurParty
+	goto_if_eq VAR_RESULT, 1, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_BulbasaurPC
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	release
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_BulbasaurParty::
+	playfanfare MUS_LEVEL_UP
+	message CeruleanCity_House3_Text_ReceivedCharmander
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_CHARMANDER
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	call EventScript_GetGiftMonPartySlot
+	call EventScript_ChangePokemonNickname
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_BulbasaurPC::
+	playfanfare MUS_LEVEL_UP
+	message CeruleanCity_House3_Text_ReceivedCharmander
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_CHARMANDER
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered
+	call EventScript_NameReceivedBoxMon
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Squirtle::
+	msgbox CeruleanCity_House3_Text_HavePokemonWillYouTakeIt, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq CeruleanCity_House3_EventScript_OldWoman_Decline
+	setvar VAR_TEMP_1, SPECIES_BULBASAUR
+	givemon SPECIES_BULBASAUR, 10, ITEM_MIRACLE_SEED
+	goto_if_eq VAR_RESULT, 0, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_SquirtleParty
+	goto_if_eq VAR_RESULT, 1, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_SquirtlePC
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	release
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_SquirtleParty::
+	playfanfare MUS_LEVEL_UP
+	message CeruleanCity_House3_Text_ReceivedBulbasaur
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_BULBASAUR
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	call EventScript_GetGiftMonPartySlot
+	call EventScript_ChangePokemonNickname
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_SquirtlePC::
+	playfanfare MUS_LEVEL_UP
+	message CeruleanCity_House3_Text_ReceivedBulbasaur
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_BULBASAUR
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered
+	call EventScript_NameReceivedBoxMon
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Charmander::
+	msgbox CeruleanCity_House3_Text_HavePokemonWillYouTakeIt, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq CeruleanCity_House3_EventScript_OldWoman_Decline
+	setvar VAR_TEMP_1, SPECIES_SQUIRTLE
+	givemon SPECIES_SQUIRTLE, 10, ITEM_MYSTIC_WATER
+	goto_if_eq VAR_RESULT, 0, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_CharmanderParty
+	goto_if_eq VAR_RESULT, 1, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_CharmanderPC
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	release
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_CharmanderParty::
+	playfanfare MUS_LEVEL_UP
+	message CeruleanCity_House3_Text_ReceivedSquirtle
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_SQUIRTLE
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	call EventScript_GetGiftMonPartySlot
+	call EventScript_ChangePokemonNickname
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_CharmanderPC::
+	playfanfare MUS_LEVEL_UP
+	message CeruleanCity_House3_Text_ReceivedSquirtle
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_SQUIRTLE
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered
+	call EventScript_NameReceivedBoxMon
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Transfered::
+	call EventScript_TransferredToPC
+	goto CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_StarterTwo_Set::
+	setflag FLAG_STARTER_TWO
+	release
+	end
+
+CeruleanCity_House3_EventScript_OldWoman_Decline::
+	msgbox CeruleanCity_House3_Text_AsYouWishThen, MSGBOX_DEFAULT
+	release
 	end
 
 CeruleanCity_House3_EventScript_Dontae::

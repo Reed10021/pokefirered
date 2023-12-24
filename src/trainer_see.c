@@ -10,6 +10,7 @@
 #include "constants/battle_setup.h"
 #include "constants/event_object_movement.h"
 #include "constants/event_objects.h"
+#include "constants/items.h"
 #include "constants/trainer_types.h"
 
 typedef u8 (*TrainerApproachFunc)(struct ObjectEvent *, s16, s16, s16);
@@ -23,6 +24,7 @@ static u8 GetTrainerApproachDistanceWest(struct ObjectEvent * trainerObj, s16 ra
 static u8 GetTrainerApproachDistanceEast(struct ObjectEvent * trainerObj, s16 range, s16 x, s16 y);
 static u8 CheckPathBetweenTrainerAndPlayer(struct ObjectEvent * trainerObj, u8 approachDistance, u8 facingDirection);
 static void TrainerApproachPlayer(struct ObjectEvent * trainerObj, u8 approachDistance);
+static bool8 ignoreIfPokeDoll(void);
 static void Task_RunTrainerSeeFuncList(u8 taskId);
 static bool8 TrainerSeeFunc_Dummy(u8 taskId, struct Task *task, struct ObjectEvent * trainerObj);
 static bool8 TrainerSeeFunc_StartExclMark(u8 taskId, struct Task *task, struct ObjectEvent * trainerObj);
@@ -85,11 +87,28 @@ static const TrainerSeeFunc sTrainerSeeFuncList2[] = {
     TrainerSeeFunc_EndJumpOutOfAsh
 };
 
+static bool8 ignoreIfPokeDoll(void)
+{
+    int i;
+    for (i = 0; i < PARTY_SIZE; i++) {
+        if (GetMonData(&gPlayerParty[i], MON_DATA_HELD_ITEM) == ITEM_POKE_DOLL) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+
+
 bool8 CheckForTrainersWantingBattle(void)
 {
     u8 i;
     if (QL_IsTrainerSightDisabled() == TRUE)
         return FALSE;
+
+    if (ignoreIfPokeDoll()) {
+        return FALSE;
+    }
 
     for (i = 0; i < OBJECT_EVENTS_COUNT; i++)
     {

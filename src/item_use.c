@@ -60,6 +60,7 @@ static void InitBerryPouchFromBattle(void);
 static void InitTeachyTvFromBag(void);
 static void Task_InitTeachyTvFromField(u8 taskId);
 static void Task_UseRepel(u8 taskId);
+void Task_UseRepelsCycle(void);
 static void RemoveUsedItem(void);
 static void Task_UsedBlackWhiteFlute(u8 taskId);
 static void ItemUseOnFieldCB_EscapeRope(u8 taskId);
@@ -141,7 +142,12 @@ static void SetUpItemUseCallback(u8 taskId)
     if (gSpecialVar_ItemId == ITEM_ENIGMA_BERRY)
         itemType = gTasks[taskId].data[4] - 1;
     else
-        itemType = ItemId_GetType(gSpecialVar_ItemId) - 1;
+    {
+        if (ItemId_GetPocket(gSpecialVar_ItemId) == POCKET_POKE_BALLS)
+            itemType = 0;
+        else
+            itemType = ItemId_GetType(gSpecialVar_ItemId) - 1;
+    }
     if (GetPocketByItemId(gSpecialVar_ItemId) == POCKET_BERRY_POUCH)
     {
         BerryPouch_SetExitCallback(sExitCallbackByItemType[itemType]);
@@ -408,7 +414,7 @@ static void DoSetUpItemUseCallback(u8 taskId)
 
 void FieldUseFunc_Medicine(u8 taskId)
 {
-    gItemUseCB = ItemUseCB_Medicine;
+    gItemUseCB = ItemUseCB_MedicineStep;
     DoSetUpItemUseCallback(taskId);
 }
 
@@ -426,7 +432,7 @@ void FieldUseFunc_PpUp(u8 taskId)
 
 void FieldUseFunc_RareCandy(u8 taskId)
 {
-    gItemUseCB = ItemUseCB_RareCandy;
+    gItemUseCB = ItemUseCB_RareCandyStep;
     DoSetUpItemUseCallback(taskId);
 }
 
@@ -565,9 +571,29 @@ static void Task_UseRepel(u8 taskId)
     {
         ItemUse_SetQuestLogEvent(QL_EVENT_USED_ITEM, NULL, gSpecialVar_ItemId, 0xFFFF);
         VarSet(VAR_REPEL_STEP_COUNT, ItemId_GetHoldEffectParam(gSpecialVar_ItemId));
+        VarSet(VAR_REPEL_LAST_USED, gSpecialVar_ItemId);
         RemoveUsedItem();
         DisplayItemMessageInBag(taskId, FONT_NORMAL, gStringVar4, Task_ReturnToBagFromContextMenu);
     }
+}
+
+void Task_UseRepelsCycle(void)
+{
+    // Once the last repel of the chosen type has been depleted, find the next lowest repel class 
+    // and start using it. (Set it as VAR_REPEL_LAST_USED)
+    u16 RepelCycle[] = { ITEM_REPEL, ITEM_SUPER_REPEL, ITEM_MAX_REPEL };
+    u8 i = 0;
+
+    while (gSpecialVar_Result == FALSE) {
+        gSpecialVar_Result = CheckBagHasItem(RepelCycle[i], 1);
+        if (gSpecialVar_Result == TRUE)
+            VarSet(VAR_REPEL_LAST_USED, RepelCycle[i]);
+        i++;
+        if (i > 2)
+            return;
+    }
+
+    return;
 }
 
 static void RemoveUsedItem(void)
@@ -609,6 +635,12 @@ static void Task_UsedBlackWhiteFlute(u8 taskId)
         PlaySE(SE_GLASS_FLUTE);
         DisplayItemMessageInBag(taskId, FONT_NORMAL, gStringVar4, Task_ReturnToBagFromContextMenu);
     }
+}
+
+void ItemUseOutOfBattle_ReduceEV(u8 taskId)
+{
+    gItemUseCB = ItemUseCB_ReduceEV;
+    SetUpItemUseCallback(taskId);
 }
 
 bool8 CanUseEscapeRopeOnCurrMap(void)
@@ -873,6 +905,18 @@ void ItemUseOutOfBattle_EnigmaBerry(u8 taskId)
     }
 }
 
+void ItemUseOutOfBattle_Mints(u8 taskId)
+{
+    gItemUseCB = ItemUseCB_Mints;
+    SetUpItemUseCallback(taskId);
+}
+
+void ItemUseOutOfBattle_AbilityCapsule(u8 taskId)
+{
+    gItemUseCB = ItemUseCB_AbilityCapsule;
+    SetUpItemUseCallback(taskId);
+}
+
 void ItemUseInBattle_EnigmaBerry(u8 taskId)
 {
     switch (GetItemEffectType(gSpecialVar_ItemId))
@@ -922,4 +966,10 @@ void ItemUse_SetQuestLogEvent(u8 eventId, struct Pokemon *pokemon, u16 itemId, u
         data->species = 0xFFFF;
     SetQuestLogEvent(eventId, (void *)data);
     Free(data);
+}
+
+void ItemUseOutOfBattle_PokeBall(u8 taskId)
+{
+    gItemUseCB = ItemUseCB_PokeBall;
+    DoSetUpItemUseCallback(taskId);
 }

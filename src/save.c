@@ -1,6 +1,11 @@
 #include "global.h"
 #include "save.h"
 #include "decompress.h"
+#include "palette.h"
+#include "scanline_effect.h"
+#include "tileset_anims.h"
+#include "field_camera.h"
+#include "field_screen_effect.h"
 #include "overworld.h"
 #include "load_save.h"
 #include "task.h"
@@ -17,6 +22,86 @@ static u8 CopySaveSlotData(u16 sectorId, const struct SaveSectorLocation *locati
 static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations);
 static u8 ReadFlashSector(u8 sectorId, struct SaveSector *sector);
 static u16 CalculateChecksum(void *data, u16 size);
+
+#define TAG_THROBBER 0x1000
+#if defined(FIRERED)
+static const u16 sThrobber_Pal[] = INCBIN_U16("graphics/text_window/throbber_firered.gbapal");
+const u32 gThrobber_Gfx[] = INCBIN_U32("graphics/text_window/throbber_firered.4bpp.lz");
+#elif defined(LEAFGREEN)
+static const u16 sThrobber_Pal[] = INCBIN_U16("graphics/text_window/throbber_leafgreen.gbapal");
+const u32 gThrobber_Gfx[] = INCBIN_U32("graphics/text_window/throbber_leafgreen.4bpp.lz");
+#endif
+
+static const struct OamData sOam_Throbber =
+{
+    .y = DISPLAY_HEIGHT,
+    .affineMode = ST_OAM_AFFINE_OFF,
+    .objMode = ST_OAM_OBJ_NORMAL,
+    .mosaic = FALSE,
+    .bpp = ST_OAM_4BPP,
+    .shape = SPRITE_SHAPE(32x64),
+    .x = 0,
+    .matrixNum = 0,
+    .size = SPRITE_SIZE(32x64),
+    .tileNum = 0,
+    .priority = 0,
+    .paletteNum = 0,
+    .affineParam = 0,
+};
+
+static const union AnimCmd sAnim_Throbber[] =
+{
+    ANIMCMD_FRAME(0, 4),
+    ANIMCMD_FRAME(32, 4),
+    ANIMCMD_FRAME(64, 4),
+    ANIMCMD_FRAME(96, 4),
+    ANIMCMD_FRAME(128, 4),
+    ANIMCMD_FRAME(160, 4),
+    ANIMCMD_FRAME(192, 4),
+    ANIMCMD_FRAME(224, 4),
+    ANIMCMD_JUMP(0),
+};
+
+static const union AnimCmd* const sAnims_Throbber[] = { sAnim_Throbber, };
+
+static const struct CompressedSpriteSheet sSpriteSheet_Throbber[] =
+{
+    {
+        .data = gThrobber_Gfx,
+        .size = 0x3200,
+        .tag = TAG_THROBBER
+    },
+    {}
+};
+
+static const struct SpritePalette sSpritePalettes_Throbber[] =
+{
+    {
+        .data = sThrobber_Pal,
+        .tag = TAG_THROBBER
+    },
+    {},
+};
+
+static const struct SpriteTemplate sSpriteTemplate_Throbber =
+{
+    .tileTag = TAG_THROBBER,
+    .paletteTag = TAG_THROBBER,
+    .oam = &sOam_Throbber,
+    .anims = sAnims_Throbber,
+    .images = NULL,
+    .affineAnims = gDummySpriteAffineAnimTable,
+    .callback = SpriteCallbackDummy
+};
+
+u8 ShowThrobber(void)
+{
+    LoadCompressedSpriteSheet(&sSpriteSheet_Throbber[0]);
+    LoadSpritePalettes(sSpritePalettes_Throbber);
+
+    // 217 and 123 are the x and y coordinates (in pixels)
+    return CreateSprite(&sSpriteTemplate_Throbber, 205, 115, 2);
+};
 
 /*
  * Sector Layout:
@@ -127,6 +212,18 @@ static bool32 SetDamagedSectorBits(u8 op, u8 sectorNum)
     }
 
     return retVal;
+}
+
+void VBlankCB_Saving(void)
+{
+    AnimateSprites();
+    BuildOamBuffer();
+    LoadOam();
+    ProcessSpriteCopyRequests();
+    //ScanlineEffect_InitHBlankDmaTransfer();
+    FieldUpdateBgTilemapScroll();
+    TransferPlttBuffer();
+    TransferTilesetAnimsBuffer();
 }
 
 static u8 WriteSaveSectorOrSlot(u16 sectorId, const struct SaveSectorLocation *locations)
@@ -634,13 +731,53 @@ static void UpdateSaveAddresses(void)
     }
 }
 
+u8 HandleThrobber(u8 throbberSpriteId, u8 flashLevel)
+{
+    if (throbberSpriteId == 250) {
+        // If in a cave, handle flash.
+        if (flashLevel != 0)
+        {
+            // Set the first buffer to be not dark
+            SetFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2, 200);
+            // Copy the first buffer to the second buffer, that way we don't end up with a flickering effect.
+            CpuFastSet(&gScanlineEffectRegBuffers[0], &gScanlineEffectRegBuffers[1], 480);
+            ScanlineEffect_Stop();
+            ScanlineEffect_Clear();
+        }
+        return ShowThrobber();
+    }
+    else {
+        // Handle MAX_SPRITES -> out of space for sprites.
+        if (throbberSpriteId != MAX_SPRITES)
+            DestroySpriteAndFreeResources(&gSprites[throbberSpriteId]);
+
+        // If in a cave, restore flash level.
+        if (flashLevel != 0)
+        {
+            // Set the first buffer back
+            InitCurrentFlashLevelScanlineEffect();
+            if (flashLevel != 0)
+            {
+                WriteFlashScanlineEffectBuffer(flashLevel);
+            }
+        }
+    }
+
+    return 250; // Set back to initial value
+}
+
 u8 HandleSavingData(u8 saveType)
 {
+    IntrCallback prevVblankCB;
     u8 i;
     u32 *backupPtr = gMain.vblankCounter1;
     u8 *tempAddr;
 
-    gMain.vblankCounter1 = NULL;
+    //gMain.vblankCounter1 = NULL;
+    // Save Throbber
+    prevVblankCB = gMain.vblankCallback;
+    SetVBlankCallback(VBlankCB_Saving);
+
     UpdateSaveAddresses();
     switch (saveType)
     {
@@ -679,18 +816,29 @@ u8 HandleSavingData(u8 saveType)
         break;
     }
     gMain.vblankCounter1 = backupPtr;
+    // Save Throbber - reset callback
+    SetVBlankCallback(prevVblankCB);
     return 0;
 }
 
 u8 TrySavingData(u8 saveType)
 {
+    u8 flashLevel = Overworld_GetFlashLevel();
+    u8 throbberSpriteId = 250; // MAX_SPRITE is 64, so use a higher value than that for the unitialized value.
     if (gFlashMemoryPresent != TRUE)
     {
         gSaveAttemptStatus = SAVE_STATUS_ERROR;
         return SAVE_STATUS_ERROR;
     }
 
+    // Show throbber, store sprite ID
+    if (saveType != SAVE_HALL_OF_FAME)
+        throbberSpriteId = HandleThrobber(throbberSpriteId, flashLevel);
     HandleSavingData(saveType);
+    // Delete throbber, restore flash level
+    if (saveType != SAVE_HALL_OF_FAME)
+        HandleThrobber(throbberSpriteId, flashLevel);
+
     if (!gDamagedSaveSectors)
     {
         gSaveAttemptStatus = SAVE_STATUS_OK;
@@ -863,12 +1011,16 @@ u32 TryWriteSpecialSaveSector(u8 sector, u8 *src)
     return SAVE_STATUS_OK;
 }
 
+#define tFlashLevel  gTasks[taskId].data[3]
+#define tSpriteID    gTasks[taskId].data[4]
 void Task_LinkFullSave(u8 taskId)
 {
     switch (gTasks[taskId].data[0])
     {
     case 0:
         gSoftResetDisabled = TRUE;
+        tFlashLevel = Overworld_GetFlashLevel();
+        tSpriteID = HandleThrobber(0, tFlashLevel);
         gTasks[taskId].data[0] = 1;
         break;
     case 1:
@@ -927,6 +1079,7 @@ void Task_LinkFullSave(u8 taskId)
     case 11:
         if (++gTasks[taskId].data[1] > 5)
         {
+            HandleThrobber(tSpriteID, tFlashLevel);
             gSoftResetDisabled = FALSE;
             DestroyTask(taskId);
         }

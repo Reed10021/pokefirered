@@ -351,6 +351,7 @@ const u32 gUnusedTilemap_BasicFrame[] = INCBIN_U32("graphics/unused/basic_frame.
 const u16 gBattleInterface_Healthbox_Pal[] = INCBIN_U16("graphics/battle_interface/healthbox.gbapal");
 const u16 gBattleInterface_Healthbar_Pal[] = INCBIN_U16("graphics/battle_interface/healthbar.gbapal");
 const u8 gBattleInterface_Gfx[] = INCBIN_U8("graphics/battle_interface/healthbox_elements.4bpp");
+const u16 gBattleInterface_TypeEffectiveness_Pal[] = INCBIN_U16("graphics/battle_interface/type_effectiveness.gbapal");
 
 const u32 gBattleInterfaceGfx_UnusedWindow3[] = INCBIN_U32("graphics/battle_interface/unused_window3.4bpp.lz");
 const u32 gBattleInterfaceGfx_UnusedWindow4[] = INCBIN_U32("graphics/battle_interface/unused_window4.4bpp.lz");
@@ -1121,6 +1122,12 @@ const u32 gTeachyTv_Pal[] = INCBIN_U32("graphics/teachy_tv/tiles.gbapal.lz");
 
 const u32 gUnusedGrayPalette[] = INCBIN_U32("graphics/unused/gray_palette.gbapal.lz");
 
+const u16 sSplitIcons_Pal[] = INCBIN_U16("graphics/interface/split_icons.gbapal");
+const u8 sSplitIcons_Gfx[] = INCBIN_U8("graphics/interface/split_icons.4bpp");
+
+const u16 sSplitIcons_Battle_Pal[] = INCBIN_U16("graphics/battle_interface/split_icons.gbapal");
+const u8 sSplitIcons_Battle_Gfx[] = INCBIN_U8("graphics/battle_interface/split_icons.4bpp");
+
 #include "data/graphics/items.h"
 
 const u32 gBattleAnimSpritePal_Shock3[] = INCBIN_U32("graphics/battle_anims/sprites/shock_3.gbapal.lz");
@@ -1258,6 +1265,12 @@ const u16 gTilesetPalettes_General[][16] =
 };
 
 const u32 gTilesetTiles_General[] = INCBIN_U32("data/tilesets/primary/general/tiles.4bpp.lz");
+
+const u16 gWallClockMale_Pal[] = INCBIN_U16("graphics/wallclock/male.gbapal");
+const u16 gWallClockFemale_Pal[] = INCBIN_U16("graphics/wallclock/female.gbapal");
+const u32 gWallClock_Gfx[] = INCBIN_U32("graphics/wallclock/clock.4bpp.lz");
+const u32 gWallClockStart_Tilemap[] = INCBIN_U32("graphics/wallclock/clock_start.bin.lz");
+const u32 gWallClockView_Tilemap[] = INCBIN_U32("graphics/wallclock/clock_view.bin.lz");
 
 const u8 gBerryFixGameboy_Pal[] = INCBIN_U8("graphics/berry_fix/gba_small.gbapal");
 const u8 gBerryFixGameboy_Gfx[] = INCBIN_U8("graphics/berry_fix/gba_small.4bpp.lz");

@@ -525,7 +525,7 @@ void InitItemIconInCursor(u16 itemId);
 u8 GetBoxWallpaper(u8 boxId);
 bool8 IsCursorOnBoxTitle(void);
 bool8 IsCursorInBox(void);
-
+void ShowPokemonStorageSystemPC(void);
 void InitMonIconFields(void);
 struct Sprite *CreateMonIconSprite(u16 species, u32 pid, s16 x, s16 y, u8 priority, u8 subpriority);
 void CreatePartyMonsSprites(bool8 species);
@@ -552,7 +552,7 @@ bool8 TryHideReleaseMonSprite(void);
 void DestroyReleaseMonIcon(void);
 u8 CountPartyMons(void);
 u8 CountPartyAliveNonEggMonsExcept(u8 slotToIgnore);
-
+u8 CountPartyNonEggMons(void);
 s8 GetMenuItemTextId(u8 menuIndex);
 bool8 MultiMove_TryMoveGroup(u8 dir);
 u8 MultiMove_GetOriginPosition(void);

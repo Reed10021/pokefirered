@@ -52,13 +52,15 @@ void SetUsedFlyQuestLogEvent(const u8 *healLocCtrlData);
 void CB2_ShowPartyMenuForItemUse(void);
 void ItemUseCB_Medicine(u8 taskId, TaskFunc func);
 void ItemUseCB_MedicineStep(u8 taskId, TaskFunc func);
+void ItemUseCB_ReduceEV(u8 taskId, TaskFunc func);
 void ItemUseCB_TryRestorePP(u8 taskId, TaskFunc func);
 void ItemUseCB_PPUp(u8 taskId, TaskFunc func);
 u16 ItemIdToBattleMoveId(u16 item);
-bool8 IsMoveHm(u16 move);
+//bool8 IsMoveHm(u16 move);
 bool8 MonKnowsMove(struct Pokemon *mon, u16 move);
 void ItemUseCB_TMHM(u8 taskId, TaskFunc func);
 void ItemUseCB_RareCandy(u8 taskId, TaskFunc func);
+void ItemUseCB_RareCandyStep(u8 taskId, TaskFunc func);
 void ItemUseCB_SacredAsh(u8 taskId, TaskFunc func);
 void ItemUseCB_EvolutionStone(u8 taskId, TaskFunc func);
 u8 GetItemEffectType(u16 item);
@@ -82,5 +84,10 @@ u8 GetPartyIdFromBattlePartyId(u8 battlePartyId);
 void ShowPartyMenuToShowcaseMultiBattleParty(void);
 void ChooseMonForDaycare(void);
 void ChoosePartyMonByMenuType(u8 menuType);
+void CB2_ReturnToPartyMenuFromSummaryScreen(void);
+bool8 CanLearnTutorMove(u16, u8);
+void ItemUseCB_Mints(u8 taskId, TaskFunc task);
+void ItemUseCB_AbilityCapsule(u8 taskId, TaskFunc task);
+void ItemUseCB_PokeBall(u8 taskId, TaskFunc task);
 
 #endif // GUARD_PARTY_MENU_H

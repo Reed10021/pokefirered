@@ -7,7 +7,8 @@ EventScript_PC::
 	setvar VAR_0x8004, 0
 	special AnimatePcTurnOn
 	playse SE_PC_ON
-	msgbox Text_BootedUpPC
+	setflag FLAG_POKEMONPCMENU
+@	msgbox Text_BootedUpPC
 	goto EventScript_PCMainMenu
 	end
 
@@ -67,6 +68,7 @@ EventScript_TurnOffPC::
 	setvar VAR_0x8004, 0
 	playse SE_PC_OFF
 	special AnimatePcTurnOff
+	clearflag FLAG_POKEMONPCMENU
 	special SetHelpContextForMap
 	releaseall
 	end

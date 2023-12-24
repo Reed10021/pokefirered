@@ -38,13 +38,149 @@ VermilionCity_EventScript_Woman::
 VermilionCity_EventScript_OldMan1::
 	lock
 	faceplayer
+	goto_if_set FLAG_DEFEATED_LT_SURGE, VermilionCity_EventScript_OldMan1_StarterThree
+VermilionCity_EventScript_OldMan1_StarterThreeReceived:
 	goto_if_eq VAR_MAP_SCENE_VERMILION_CITY, 3, VermilionCity_EventScript_OldMan1SSAnneLeft
 	msgbox VermilionCity_Text_DidYouSeeSSAnneInHarbor
+	release
+	end
+VermilionCity_EventScript_OldMan1_StarterThree:
+	goto_if_set FLAG_STARTER_THREE, VermilionCity_EventScript_OldMan1_StarterThreeReceived
+	switch VAR_STARTER_MON
+	case 0, VermilionCity_EventScript_OldMan1_StarterThree_Bulbasaur
+	case 1, VermilionCity_EventScript_OldMan1_StarterThree_Squirtle
+	case 2, VermilionCity_EventScript_OldMan1_StarterThree_Charmander
 	release
 	end
 
 VermilionCity_EventScript_OldMan1SSAnneLeft::
 	msgbox VermilionCity_Text_SSAnneHasDepartedForYear
+	release
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_Bulbasaur::
+	msgbox VermilionCity_Text_HavePokemonWillYouTakeIt, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq VermilionCity_EventScript_OldMan1_StarterThree_Decline
+	setvar VAR_TEMP_1, SPECIES_SQUIRTLE
+	givemon SPECIES_SQUIRTLE, 15, ITEM_MYSTIC_WATER
+	goto_if_eq VAR_RESULT, 0, VermilionCity_EventScript_OldMan1_StarterThree_BulbasaurParty
+	goto_if_eq VAR_RESULT, 1, VermilionCity_EventScript_OldMan1_StarterThree_BulbasaurPC
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	release
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_BulbasaurParty::
+	playfanfare MUS_LEVEL_UP
+	message VermilionCity_Text_ReceivedSquirtle
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_SQUIRTLE
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, VermilionCity_EventScript_OldMan1_StarterThree_Set
+	call EventScript_GetGiftMonPartySlot
+	call EventScript_ChangePokemonNickname
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Set
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_BulbasaurPC::
+	playfanfare MUS_LEVEL_UP
+	message VermilionCity_Text_ReceivedSquirtle
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_SQUIRTLE
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, VermilionCity_EventScript_OldMan1_StarterThree_Transfered
+	call EventScript_NameReceivedBoxMon
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Transfered
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_Squirtle::
+	msgbox VermilionCity_Text_HavePokemonWillYouTakeIt, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq VermilionCity_EventScript_OldMan1_StarterThree_Decline
+	setvar VAR_TEMP_1, SPECIES_CHARMANDER
+	givemon SPECIES_CHARMANDER, 10, ITEM_CHARCOAL
+	goto_if_eq VAR_RESULT, 0, VermilionCity_EventScript_OldMan1_StarterThree_SquirtleParty
+	goto_if_eq VAR_RESULT, 1, VermilionCity_EventScript_OldMan1_StarterThree_SquirtlePC
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	release
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_SquirtleParty::
+	playfanfare MUS_LEVEL_UP
+	message VermilionCity_Text_ReceivedCharmander
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_CHARMANDER
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, VermilionCity_EventScript_OldMan1_StarterThree_Set
+	call EventScript_GetGiftMonPartySlot
+	call EventScript_ChangePokemonNickname
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Set
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_SquirtlePC::
+	playfanfare MUS_LEVEL_UP
+	message VermilionCity_Text_ReceivedCharmander
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_CHARMANDER
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, VermilionCity_EventScript_OldMan1_StarterThree_Transfered
+	call EventScript_NameReceivedBoxMon
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Transfered
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_Charmander::
+	msgbox VermilionCity_Text_HavePokemonWillYouTakeIt, MSGBOX_YESNO
+	compare VAR_RESULT, NO
+	goto_if_eq VermilionCity_EventScript_OldMan1_StarterThree_Decline
+	setvar VAR_TEMP_1, SPECIES_BULBASAUR
+	givemon SPECIES_BULBASAUR, 10, ITEM_MIRACLE_SEED
+	goto_if_eq VAR_RESULT, 0, VermilionCity_EventScript_OldMan1_StarterThree_CharmanderParty
+	goto_if_eq VAR_RESULT, 1, VermilionCity_EventScript_OldMan1_StarterThree_CharmanderPC
+	goto_if_eq VAR_RESULT, 2, EventScript_NoMoreRoomForPokemon
+	release
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_CharmanderParty::
+	playfanfare MUS_LEVEL_UP
+	message VermilionCity_Text_ReceivedBulbasaur
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_BULBASAUR
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, VermilionCity_EventScript_OldMan1_StarterThree_Set
+	call EventScript_GetGiftMonPartySlot
+	call EventScript_ChangePokemonNickname
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Set
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_CharmanderPC::
+	playfanfare MUS_LEVEL_UP
+	message VermilionCity_Text_ReceivedBulbasaur
+	waitmessage
+	waitfanfare
+	bufferspeciesname STR_VAR_1, SPECIES_BULBASAUR
+	msgbox Text_GiveNicknameToThisMon, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, VermilionCity_EventScript_OldMan1_StarterThree_Transfered
+	call EventScript_NameReceivedBoxMon
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Transfered
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_Transfered::
+	call EventScript_TransferredToPC
+	goto VermilionCity_EventScript_OldMan1_StarterThree_Set
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_Set::
+	setflag FLAG_STARTER_THREE
+	release
+	end
+
+VermilionCity_EventScript_OldMan1_StarterThree_Decline::
+	msgbox VermilionCity_Text_AsYouWishThen, MSGBOX_DEFAULT
 	release
 	end
 

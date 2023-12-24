@@ -373,7 +373,7 @@ static const struct TrainerCard sLinkPlayerTrainerCardTemplate1 =
         .hofDebutSeconds = 59,
         .caughtMonsCount = 200,
         .trainerId = 0x6072,
-        .playTimeHours = 999,
+        .playTimeHours = 64999,
         .playTimeMinutes = 59,
         .linkBattleWins = 5535,
         .linkBattleLosses = 5535,
@@ -413,7 +413,7 @@ static const struct TrainerCard sLinkPlayerTrainerCardTemplate2 =
         .hofDebutSeconds = 59,
         .caughtMonsCount = 200,
         .trainerId = 0x6072,
-        .playTimeHours = 999,
+        .playTimeHours = 64999,
         .playTimeMinutes = 59,
         .linkBattleWins = 5535,
         .linkBattleLosses = 5535,
@@ -806,9 +806,9 @@ static void SetPlayerCardData(struct TrainerCard *trainerCard, u8 cardType)
     trainerCard->rse.hofDebutHours = playTime >> 16;
     trainerCard->rse.hofDebutMinutes = (playTime >> 8) & 0xFF;
     trainerCard->rse.hofDebutSeconds = playTime & 0xFF;
-    if ((playTime >> 16) > 999)
+    if ((playTime >> 16) > 64999)
     {
-        trainerCard->rse.hofDebutHours = 999;
+        trainerCard->rse.hofDebutHours = 64999;
         trainerCard->rse.hofDebutMinutes = 59;
         trainerCard->rse.hofDebutSeconds = 59;
     }
@@ -1149,7 +1149,7 @@ static void PrintMoneyOnCard(void)
     u8 x;
 
     txtPtr = StringCopy(buffer, gText_TrainerCardYen);
-    ConvertIntToDecimalStringN(txtPtr, sTrainerCardDataPtr->trainerCard.rse.money, STR_CONV_MODE_LEFT_ALIGN, 6);
+    ConvertIntToDecimalStringN(txtPtr, sTrainerCardDataPtr->trainerCard.rse.money, STR_CONV_MODE_LEFT_ALIGN, 7);
     if (sTrainerCardDataPtr->cardType != CARD_TYPE_RSE)
     {
         x = -122 - 6 * StringLength(buffer);

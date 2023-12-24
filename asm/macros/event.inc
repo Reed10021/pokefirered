@@ -59,6 +59,7 @@
 	MSGBOX_DEFAULT = 4
 	MSGBOX_YESNO = 5
 	MSGBOX_AUTOCLOSE = 6
+	MSGBOX_ANYBUTTONPRESS = 10
 
 	STD_OBTAIN_DECORATION = 7
 	STD_PUT_ITEM_AWAY = 8
@@ -1631,6 +1632,19 @@
 	stringvar \stringVarId
 	.2byte \item
 	.2byte \quantity
+	.endm
+
+	@ Checks if the player has enough space in their PC to hold quantity more of the specified item. Sets VAR_RESULT to
+	@ TRUE if there is room, or FALSE is there is no room.
+	.macro checkpcspace itemId:req, quantity=1
+	.byte 0xd5
+	.2byte \itemId
+	.2byte \quantity
+	.endm
+
+	@ Blocks script execution until the player presses any button.
+	.macro waitanybuttonpress
+	.byte 0xd6
 	.endm
 
 

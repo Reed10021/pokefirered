@@ -395,14 +395,14 @@ static void Task_ScrollIndicatorArrowPair(u8 taskId)
     struct ScrollIndicatorPair *data = (struct ScrollIndicatorPair *)gTasks[taskId].data;
     u16 currItem = (*data->scrollOffset);
 
-    if (currItem == data->fullyUpThreshold)
-        gSprites[data->topSpriteId].invisible = TRUE;
-    else
+    //if (currItem == data->fullyUpThreshold)
+    //    gSprites[data->topSpriteId].invisible = TRUE;
+    //else
         gSprites[data->topSpriteId].invisible = FALSE;
 
-    if (currItem == data->fullyDownThreshold)
-        gSprites[data->bottomSpriteId].invisible = TRUE;
-    else
+    //if (currItem == data->fullyDownThreshold)
+    //    gSprites[data->bottomSpriteId].invisible = TRUE;
+    //else
         gSprites[data->bottomSpriteId].invisible = FALSE;
 }
 

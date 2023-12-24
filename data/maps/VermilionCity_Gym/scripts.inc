@@ -232,6 +232,26 @@ VermilionCity_Gym_EventScript_GiveTM34::
 	giveitem_msg VermilionCity_Gym_Text_ReceivedTM34FromLtSurge, ITEM_TM34
 	setflag FLAG_GOT_TM34_FROM_SURGE
 	msgbox VermilionCity_Gym_Text_ExplainTM34
+	closemessage
+	delay 15
+	special InitRoamer
+	playmoncry VAR_0x8003, CRY_MODE_ENCOUNTER
+	waitmoncry
+	playse SE_PIN
+	applymovement OBJ_EVENT_ID_PLAYER, Common_Movement_ExclamationMark
+	waitmovement 0
+	waitse
+	special CheckShinyRoamer
+	compare VAR_RESULT, FALSE
+	goto_if_eq VermilionCity_Gym_EventScript_GiveTM34_NoShiny
+	playse SE_SHINY
+	waitse
+	delay 10
+	msgbox gText_ShinyRoamer, MSGBOX_DEFAULT
+	goto VermilionCity_Gym_EventScript_GiveTM34_Return
+VermilionCity_Gym_EventScript_GiveTM34_NoShiny:
+	msgbox gText_Roamer, MSGBOX_DEFAULT
+VermilionCity_Gym_EventScript_GiveTM34_Return:
 	release
 	end
 

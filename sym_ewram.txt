@@ -32,6 +32,7 @@
 	.include "src/battle_anim_mons.o"
 	.include "src/title_screen.o"
 	.include "src/field_weather.o"
+	.include "src/field_weather_effects.o"
 	.include "src/battle_setup.o"
 	.include "src/wild_encounter.o"
 	.include "src/field_effect.o"

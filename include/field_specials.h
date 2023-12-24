@@ -14,6 +14,7 @@ void SetPCBoxToSendMon(u8);
 u16 GetPCBoxToSendMon(void);
 bool8 IsDestinationBoxFull(void);
 bool8 ShouldShowBoxWasFullMessage(void);
+void SetSeenMon(void);
 u16 GetHiddenItemAttr(u32 hiddenItem, u8 attr);
 u8 GetUnlockedSeviiAreas(void);
 u32 GetPlayerTrainerId(void);

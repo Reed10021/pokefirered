@@ -2442,6 +2442,27 @@ extern const u32 gMonBackPic_DoubleQuestionMark[];
 extern const u32 gMonPalette_DoubleQuestionMark[];
 extern const u32 gMonShinyPalette_DoubleQuestionMark[];
 
+extern const u32 gMonFrontPic_Deoxys_Attack[];
+extern const u32 gMonPalette_Deoxys_Attack[];
+extern const u32 gMonBackPic_Deoxys_Attack[];
+extern const u32 gMonShinyPalette_Deoxys_Attack[];
+extern const u32 gMonStillFrontPic_Deoxys_Attack[];
+extern const u8 gMonIcon_Deoxys_Attack[];
+
+extern const u32 gMonFrontPic_Deoxys_Defense[];
+extern const u32 gMonPalette_Deoxys_Defense[];
+extern const u32 gMonBackPic_Deoxys_Defense[];
+extern const u32 gMonShinyPalette_Deoxys_Defense[];
+extern const u32 gMonStillFrontPic_Deoxys_Defense[];
+extern const u8 gMonIcon_Deoxys_Defense[];
+
+extern const u32 gMonFrontPic_Deoxys_Speed[];
+extern const u32 gMonPalette_Deoxys_Speed[];
+extern const u32 gMonBackPic_Deoxys_Speed[];
+extern const u32 gMonShinyPalette_Deoxys_Speed[];
+extern const u32 gMonStillFrontPic_Deoxys_Speed[];
+extern const u8 gMonIcon_Deoxys_Speed[];
+
 // trainer sprites
 extern const u32 gTrainerFrontPic_AquaLeaderArchie[];
 extern const u32 gTrainerFrontPic_AquaGruntM[];
@@ -2780,6 +2801,13 @@ extern const u8 gTeachyTv_Gfx[];
 extern const u8 gTeachyTvScreen_Tilemap[];
 extern const u8 gTeachyTvTitle_Tilemap[];
 extern const u32 gTeachyTv_Pal[];
+
+// wall clock
+extern const u32 gWallClock_Gfx[];
+extern const u16 gWallClockMale_Pal[];
+extern const u16 gWallClockFemale_Pal[];
+extern const u32 gWallClockStart_Tilemap[];
+extern const u32 gWallClockView_Tilemap[];
 
 // berry_fix_program
 extern const u8 gBerryFixGameboy_Gfx[];
@@ -3280,6 +3308,19 @@ extern const u32 gItemIconPalette_PowderJar[];
 extern const u32 gItemIcon_Gem[];
 extern const u32 gItemIconPalette_Ruby[];
 extern const u32 gItemIconPalette_Sapphire[];
+
+// Mints
+extern const u32 gItemIcon_Mint[];
+extern const u32 gItemIconPalette_RedMint[];
+extern const u32 gItemIconPalette_BlueMint[];
+extern const u32 gItemIconPalette_PinkMint[];
+extern const u32 gItemIconPalette_GreenMint[];
+extern const u32 gItemIconPalette_LightBlueMint[];
+extern const u32 gItemIconPalette_YellowMint[];
+
+extern const u32 gItemIcon_AbilityCapsule[];
+extern const u32 gItemIconPalette_AbilityCapsule[];
+
 extern const u32 gItemIcon_ReturnToFieldArrow[];
 extern const u32 gItemIconPalette_ReturnToFieldArrow[];
 
@@ -3898,6 +3939,12 @@ extern const u32 gBattleAnimBgTilemap_SurfOpponent[];
 extern const u32 gBattleAnimBgTilemap_SurfPlayer[];
 extern const u32 gBattleAnimBgTilemap_SurfContest[];
 
+extern const u16 sSplitIcons_Pal[];
+extern const u8 sSplitIcons_Gfx[];
+
+extern const u16 sSplitIcons_Battle_Pal[];
+extern const u8 sSplitIcons_Battle_Gfx[];
+
 // dark
 extern const u32 gMetalShineGfx[];
 extern const u32 gMetalShinePalette[];
@@ -4477,6 +4524,7 @@ extern const u32 gBattleInterface_PartySummaryBar_Gfx[];
 extern const u8 gBattleInterface_Gfx[][32];
 extern const u16 gBattleInterface_Healthbox_Pal[];
 extern const u16 gBattleInterface_Healthbar_Pal[];
+extern const u16 gBattleInterface_TypeEffectiveness_Pal[];
 
 // item_menu
 extern const u32 gBagBg_Gfx[];

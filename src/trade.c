@@ -1963,9 +1963,9 @@ static u8 CheckValidityOfTradeMons(u8 *aliveMons, u8 playerPartyCount, u8 cursor
 
     // Partner cant trade illegitimate Deoxys or Mew
     partnerSpecies = GetMonData(&gEnemyParty[sTradeMenu->partnerCursorPosition % PARTY_SIZE], MON_DATA_SPECIES);
-    if ((partnerSpecies == SPECIES_DEOXYS || partnerSpecies == SPECIES_MEW)
-        && !GetMonData(&gEnemyParty[sTradeMenu->partnerCursorPosition % PARTY_SIZE], MON_DATA_MODERN_FATEFUL_ENCOUNTER))
-        return PARTNER_MON_INVALID;
+    //if ((partnerSpecies == SPECIES_DEOXYS || partnerSpecies == SPECIES_MEW)
+    //    && !GetMonData(&gEnemyParty[sTradeMenu->partnerCursorPosition % PARTY_SIZE], MON_DATA_MODERN_FATEFUL_ENCOUNTER))
+    //    return PARTNER_MON_INVALID;
 
     if (hasLiveMon != 0)
         hasLiveMon = BOTH_MONS_VALID;
@@ -2752,47 +2752,47 @@ static u32 CanTradeSelectedMon(struct Pokemon * playerParty, int partyCount, int
     }
 
     // Cant trade Eggs or non-Kanto mons if player doesn't have National Dex
-    if (!IsNationalPokedexEnabled())
-    {
-        // See comment below
-    #ifdef BUGFIX
-        if (species2[monIdx] == SPECIES_EGG)
-            return CANT_TRADE_EGG_YET;
-    #endif
+    //if (!IsNationalPokedexEnabled())
+    //{
+    //    // See comment below
+    //#ifdef BUGFIX
+    //    if (species2[monIdx] == SPECIES_EGG)
+    //        return CANT_TRADE_EGG_YET;
+    //#endif
 
-        if (species2[monIdx] > KANTO_SPECIES_END)
-            return CANT_TRADE_NATIONAL;
+    //    if (species2[monIdx] > KANTO_SPECIES_END)
+    //        return CANT_TRADE_NATIONAL;
 
-        // This is meant to be SPECIES_EGG. There are obviously no circumstances
-        // where you're allowed to trade SPECIES_NONE, so it wouldn't make sense to
-        // only check this if the National Dex is missing. SPECIES_EGG will accidentally
-        // be handled instead by the conditional above. Both of these problems are fixed in Emerald.
-    #ifndef BUGFIX
-        if (species2[monIdx] == SPECIES_NONE)
-            return CANT_TRADE_EGG_YET;
-    #endif
-    }
+    //    // This is meant to be SPECIES_EGG. There are obviously no circumstances
+    //    // where you're allowed to trade SPECIES_NONE, so it wouldn't make sense to
+    //    // only check this if the National Dex is missing. SPECIES_EGG will accidentally
+    //    // be handled instead by the conditional above. Both of these problems are fixed in Emerald.
+    //#ifndef BUGFIX
+    //    if (species2[monIdx] == SPECIES_NONE)
+    //        return CANT_TRADE_EGG_YET;
+    //#endif
+    //}
 
-    partner = &gLinkPlayers[GetMultiplayerId() ^ 1];
-    if ((partner->version & 0xFF) != VERSION_RUBY &&
-        (partner->version & 0xFF) != VERSION_SAPPHIRE)
-    {
-        // Does partner not have National Dex
-        if (!(partner->progressFlagsCopy & 0xF))
-        {
-            if (species2[monIdx] == SPECIES_EGG)
-                return CANT_TRADE_PARTNER_EGG_YET;
+    //partner = &gLinkPlayers[GetMultiplayerId() ^ 1];
+    //if ((partner->version & 0xFF) != VERSION_RUBY &&
+    //    (partner->version & 0xFF) != VERSION_SAPPHIRE)
+    //{
+    //    // Does partner not have National Dex
+    //    if (!(partner->progressFlagsCopy & 0xF))
+    //    {
+    //        if (species2[monIdx] == SPECIES_EGG)
+    //            return CANT_TRADE_PARTNER_EGG_YET;
 
-            if (species2[monIdx] > KANTO_SPECIES_END)
-                return CANT_TRADE_INVALID_MON;
-        }
-    }
+    //        if (species2[monIdx] > KANTO_SPECIES_END)
+    //            return CANT_TRADE_INVALID_MON;
+    //    }
+    //}
 
-    if (species[monIdx] == SPECIES_DEOXYS || species[monIdx] == SPECIES_MEW)
-    {
-        if (!GetMonData(&playerParty[monIdx], MON_DATA_MODERN_FATEFUL_ENCOUNTER))
-            return CANT_TRADE_INVALID_MON;
-    }
+    //if (species[monIdx] == SPECIES_DEOXYS || species[monIdx] == SPECIES_MEW)
+    //{
+    //    if (!GetMonData(&playerParty[monIdx], MON_DATA_MODERN_FATEFUL_ENCOUNTER))
+    //        return CANT_TRADE_INVALID_MON;
+    //}
 
     // Make Eggs not count for numMonsLeft
     for (i = 0; i < partyCount; i++)
@@ -2881,17 +2881,17 @@ int GetUnionRoomTradeMessageId(struct RfuGameCompatibilityData player, struct Rf
 
     // If partner is not using FRLG, both players must have progressed the story
     // to a certain point (becoming champion in RSE, finishing the Sevii islands in FRLG)
-    if (isNotFRLG)
-    {
-        if (!playerCanLinkNationally)
-            return UR_TRADE_MSG_CANT_TRADE_WITH_PARTNER_1;
-        else if (!partnerCanLinkNationally)
-            return UR_TRADE_MSG_CANT_TRADE_WITH_PARTNER_2;
-    }
+    //if (isNotFRLG)
+    //{
+    //    if (!playerCanLinkNationally)
+    //        return UR_TRADE_MSG_CANT_TRADE_WITH_PARTNER_1;
+    //    else if (!partnerCanLinkNationally)
+    //        return UR_TRADE_MSG_CANT_TRADE_WITH_PARTNER_2;
+    //}
 
     // Cannot trade illegitimate Deoxys/Mew
-    if (IsDeoxysOrMewUntradable(playerSpecies, isModernFatefulEncounter))
-        return UR_TRADE_MSG_MON_CANT_BE_TRADED_2;
+    //if (IsDeoxysOrMewUntradable(playerSpecies, isModernFatefulEncounter))
+    //    return UR_TRADE_MSG_MON_CANT_BE_TRADED_2;
 
     if (partnerSpecies == SPECIES_EGG)
     {
@@ -2913,21 +2913,21 @@ int GetUnionRoomTradeMessageId(struct RfuGameCompatibilityData player, struct Rf
         return UR_TRADE_MSG_MON_CANT_BE_TRADED_1;
 
     // If the player doesn't have the National Dex then Eggs and non-Kanto Pokémon can't be traded
-    if (!playerHasNationalDex)
-    {
-        if (playerSpecies2 == SPECIES_EGG)
-            return UR_TRADE_MSG_EGG_CANT_BE_TRADED;
+    //if (!playerHasNationalDex)
+    //{
+    //    if (playerSpecies2 == SPECIES_EGG)
+    //        return UR_TRADE_MSG_EGG_CANT_BE_TRADED;
 
-        if (playerSpecies2 > KANTO_SPECIES_END)
-            return UR_TRADE_MSG_MON_CANT_BE_TRADED_2;
+    //    if (playerSpecies2 > KANTO_SPECIES_END)
+    //        return UR_TRADE_MSG_MON_CANT_BE_TRADED_2;
 
-        if (partnerSpecies > KANTO_SPECIES_END)
-            return UR_TRADE_MSG_PARTNERS_MON_CANT_BE_TRADED;
-    }
+    //    if (partnerSpecies > KANTO_SPECIES_END)
+    //        return UR_TRADE_MSG_PARTNERS_MON_CANT_BE_TRADED;
+    //}
 
     // If the partner doesn't have the National Dex then the player's offer has to be a Kanto Pokémon
-    if (!partnerHasNationalDex && playerSpecies2 > KANTO_SPECIES_END)
-        return UR_TRADE_MSG_PARTNER_CANT_ACCEPT_MON;
+    //if (!partnerHasNationalDex && playerSpecies2 > KANTO_SPECIES_END)
+    //    return UR_TRADE_MSG_PARTNER_CANT_ACCEPT_MON;
 
     // Trade is allowed
     return UR_TRADE_MSG_NONE;
@@ -2937,18 +2937,18 @@ int CanRegisterMonForTradingBoard(struct RfuGameCompatibilityData player, u16 sp
 {
     bool8 hasNationalDex = player.hasNationalDex;
 
-    if (IsDeoxysOrMewUntradable(species, isModernFatefulEncounter))
-        return CANT_REGISTER_MON;
+    //if (IsDeoxysOrMewUntradable(species, isModernFatefulEncounter))
+    //    return CANT_REGISTER_MON;
 
-    if (hasNationalDex)
-        return CAN_REGISTER_MON;
+    //if (hasNationalDex)
+    //    return CAN_REGISTER_MON;
 
     // Eggs can only be traded if the player has the National Dex
     if (species2 == SPECIES_EGG)
         return CANT_REGISTER_EGG;
 
-    if (species2 > KANTO_SPECIES_END && species2 != SPECIES_EGG)
-        return CANT_REGISTER_MON;
+    //if (species2 > KANTO_SPECIES_END && species2 != SPECIES_EGG)
+    //    return CANT_REGISTER_MON;
 
     return CAN_REGISTER_MON;
 }

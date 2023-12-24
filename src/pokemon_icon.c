@@ -438,6 +438,9 @@ const u8 *const gMonIconTable[] = {
     [SPECIES_JIRACHI]     = gMonIcon_Jirachi,
     [SPECIES_DEOXYS]      = gMonIcon_Deoxys,
     [SPECIES_CHIMECHO]    = gMonIcon_Chimecho,
+    [SPECIES_DEOXYS_ATTACK]  = gMonIcon_Deoxys,
+    [SPECIES_DEOXYS_DEFENSE] = gMonIcon_Deoxys,
+    [SPECIES_DEOXYS_SPEED]   = gMonIcon_Deoxys,
     [SPECIES_EGG]         = gMonIcon_Egg,
     [SPECIES_UNOWN_B]     = gMonIcon_UnownB,
     [SPECIES_UNOWN_C]     = gMonIcon_UnownC,
@@ -881,6 +884,9 @@ const u8 gMonIconPaletteIndices[] = {
     [SPECIES_JIRACHI]     = 0,
     [SPECIES_DEOXYS]      = 0,
     [SPECIES_CHIMECHO]    = 0,
+    [SPECIES_DEOXYS_ATTACK]  = 0,
+    [SPECIES_DEOXYS_DEFENSE] = 0,
+    [SPECIES_DEOXYS_SPEED]   = 0,
     [SPECIES_EGG]         = 1,
     [SPECIES_UNOWN_B]     = 0,
     [SPECIES_UNOWN_C]     = 0,
@@ -1108,8 +1114,8 @@ u16 MailSpeciesToIconSpecies(u16 species)
 const u8 *GetMonIconTiles(u16 species, bool32 extra)
 {
     const u8 *iconSprite = gMonIconTable[species];
-    if (species == SPECIES_DEOXYS && extra == TRUE)
-        iconSprite += 0x400;
+    //if (species == SPECIES_DEOXYS && extra == TRUE)
+    //    iconSprite += 0x400;
     return iconSprite;
 }
 

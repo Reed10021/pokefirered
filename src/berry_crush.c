@@ -2599,6 +2599,7 @@ static s32 HideGameDisplay(void)
     case 1:
         if (!IsLinkTaskFinished())
             return 0;
+        break;
         // fall through. The original author forgot to use "break" here
         // because this will call BeginNormalPaletteFade() twice.
     case 2:

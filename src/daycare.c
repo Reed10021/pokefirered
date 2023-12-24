@@ -27,6 +27,7 @@
 #include "help_system.h"
 #include "field_fadetransition.h"
 #include "trade.h"
+#include "daycare.h"
 #include "constants/daycare.h"
 #include "constants/region_map_sections.h"
 
@@ -56,6 +57,7 @@ static void ClearDaycareMonMail(struct DayCareMail *mail);
 static void SetInitialEggData(struct Pokemon *mon, u16 species, struct DayCare *daycare);
 static u8 GetDaycareCompatibilityScore(struct DayCare *daycare);
 static void DaycarePrintMonInfo(u8 windowId, u32 daycareSlotId, u8 y);
+static u32 RollEggChains(struct DayCare* daycare);
 
 static void Task_EggHatch(u8 taskID);
 static void CB2_EggHatch_0(void);
@@ -676,79 +678,118 @@ static u16 GetEggSpecies(u16 species)
 
     return species;
 }
-//
-//static s32 GetSlotToInheritNature(struct DayCare *daycare)
-//{
-//    u32 species[DAYCARE_MON_COUNT];
-//    s32 i;
-//    s32 dittoCount;
-//    s32 slot = -1;
-//
-//    // search for female gender
-//    for (i = 0; i < DAYCARE_MON_COUNT; i++)
-//    {
-//        if (GetBoxMonGender(&daycare->mons[i].mon) == MON_FEMALE)
-//            slot = i;
-//    }
-//
-//    // search for ditto
-//    for (dittoCount = 0, i = 0; i < DAYCARE_MON_COUNT; i++)
-//    {
-//        species[i] = GetBoxMonData(&daycare->mons[i].mon, MON_DATA_SPECIES);
-//        if (species[i] == SPECIES_DITTO)
-//            dittoCount++, slot = i;
-//    }
-//
-//    // coin flip on ...two Dittos
-//    if (dittoCount == 2)
-//    {
-//        if (Random() >= USHRT_MAX / 2)
-//            slot = 0;
-//        else
-//            slot = 1;
-//    }
-//
-//    // nature inheritance only if holds everstone
-//    if (GetBoxMonData(&daycare->mons[slot].mon, MON_DATA_HELD_ITEM) != ITEM_EVERSTONE
-//        || Random() >= USHRT_MAX / 2)
-//    {
-//        return -1;
-//    }
-//
-//    return slot;
-//}
+
+static s32 GetParentToInheritNature(struct DayCare* daycare)
+{
+    u32 monItemOne = GetBoxMonData(&daycare->mons[0].mon, MON_DATA_HELD_ITEM);
+    u32 monItemTwo = GetBoxMonData(&daycare->mons[1].mon, MON_DATA_HELD_ITEM);
+    s32 parent = -1;
+
+    // If any of the parents hold everstones, make that the nature.
+    // If both parents hold everstones, coin flip.
+    if (monItemOne == ITEM_EVERSTONE || monItemTwo == ITEM_EVERSTONE) {
+        if (monItemOne == ITEM_EVERSTONE && monItemTwo != ITEM_EVERSTONE)
+            parent = 0;
+        else if (monItemOne != ITEM_EVERSTONE && monItemTwo == ITEM_EVERSTONE)
+            parent = 1;
+        else //Both hold everstones
+            parent = Random() % 2;
+    }
+    // Don't inherit nature if not holding Everstone
+
+    return parent;
+}
 
 static void _TriggerPendingDaycareEgg(struct DayCare *daycare)
 {
-//    s32 natureSlot;
-//    s32 natureTries = 0;
-//
-//    SeedRng2(gMain.vblankCounter2);
-//    natureSlot = GetSlotToInheritNature(daycare);
-//
-//    if (natureSlot < 0)
-//    {
-//        daycare->offspringPersonality = (Random2() << 0x10) | ((Random() % 0xfffe) + 1);
-//    }
-//    else
-//    {
-//        u8 wantedNature = GetNatureFromPersonality(GetBoxMonData(&daycare->mons[natureSlot].mon, MON_DATA_PERSONALITY, NULL));
-//        u32 personality;
-//
-//        do
-//        {
-//            personality = (Random2() << 0x10) | (Random());
-//            if (wantedNature == GetNatureFromPersonality(personality) && personality != 0)
-//                break; // we found a personality with the same nature
-//
-//            natureTries++;
-//        } while (natureTries <= 2400);
-//
-//        daycare->offspringPersonality = personality;
-//    }
+    s32 parent;
+    u32 personality;
 
-    daycare->offspringPersonality = ((Random()) % 0xFFFE) + 1;
+    parent = GetParentToInheritNature(daycare);
+
+    // don't inherit nature
+    if (parent < 0)
+    {
+        personality = RollEggChains(daycare);
+    }
+    // inherit nature
+    else
+    {
+        s32 natureTries = 0;
+        u8 isShiny = 0;
+        u8 wantedNature = GetNatureFromPersonality(GetBoxMonData(&daycare->mons[parent].mon, MON_DATA_PERSONALITY, NULL));
+        personality = RollEggChains(daycare);
+        // If we got a shiny from the chain, then set the isShiny flag to true.
+        if (IsPersonalityShiny(personality, 0))
+            isShiny = 1;
+        do
+        {
+            if (wantedNature == GetNatureFromPersonality(personality) && personality != 0)
+                break; // found a personality with the same nature
+            else
+            {
+                personality = ((Random()) % 0xFFFE) + 1;
+                if (isShiny)
+                    personality = ForceShiny(personality);
+            }
+            natureTries++;
+        } while (natureTries <= 2400);
+    }
+    daycare->offspringPersonality = personality;
     FlagSet(FLAG_PENDING_DAYCARE_EGG);
+}
+
+static u32 RollEggChains(struct DayCare* daycare)
+{
+    u32 personality;
+    u32 eggChainCount = VarGet(VAR_EGG_CHAIN);
+    u32 rolls = 0; // We start rolls at 0. So a VAR_EGG_CHAIN of 24 = 24 additional rolls for shiny.
+    {
+        u16 eggChainParent1 = VarGet(VAR_EGG_CHAIN_PARENT_1);
+        u16 eggChainParent2 = VarGet(VAR_EGG_CHAIN_PARENT_2);
+
+        if ((GetBoxMonData(&daycare->mons[0].mon, MON_DATA_SPECIES) == eggChainParent1 && GetBoxMonData(&daycare->mons[1].mon, MON_DATA_SPECIES) == eggChainParent2)
+            || (GetBoxMonData(&daycare->mons[0].mon, MON_DATA_SPECIES) == eggChainParent2 && GetBoxMonData(&daycare->mons[1].mon, MON_DATA_SPECIES) == eggChainParent1))
+        {
+            if (eggChainCount < 65535) // 65535 is the limit for u16, which is what the var is.
+            {
+                eggChainCount++;
+                VarSet(VAR_EGG_CHAIN, eggChainCount);
+            }
+            // Add 40 to the base shiny rate because this game is unforgivable. And slow.
+            // Compared to modern standards anyways.
+            eggChainCount += 40; // eggChainCount is u32, so we don't have to worry about overflow.
+
+            // Reward long chains that haven't broken
+            if (eggChainCount >= 250)
+                eggChainCount += (eggChainCount * 4);
+            else if (eggChainCount >= 160)
+                eggChainCount += (eggChainCount * 3);
+            else if (eggChainCount >= 110)
+                eggChainCount += (eggChainCount * 2);
+            else if (eggChainCount >= 70)
+                eggChainCount += 90 + eggChainCount;
+            else if (eggChainCount >= 40)
+                eggChainCount += 40 + eggChainCount;
+            else if (eggChainCount >= 10)
+                eggChainCount += eggChainCount;
+        }
+        else {
+            // Parents don't match species-wise, so reset the chain starting with this egg (0+1) and store the parents
+            eggChainCount = 1;
+            VarSet(VAR_EGG_CHAIN, eggChainCount);
+            VarSet(VAR_EGG_CHAIN_PARENT_1, GetBoxMonData(&daycare->mons[0].mon, MON_DATA_SPECIES));
+            VarSet(VAR_EGG_CHAIN_PARENT_2, GetBoxMonData(&daycare->mons[1].mon, MON_DATA_SPECIES));
+        }
+    }
+
+    do
+    {
+        personality = ((Random()) % 0xFFFE) + 1;
+        rolls++;
+    } while (!IsPersonalityShiny(personality, 0) && rolls < eggChainCount); // While not shiny (>= as opposed to < for the check) and while we haven't exceeded VAR_CHAIN rolls.
+
+    return personality;
 }
 
 static void _TriggerPendingDaycareMaleEgg(struct DayCare *daycare)
@@ -806,8 +847,19 @@ static void InheritIVs(struct Pokemon *egg, struct DayCare *daycare)
     for (i = 0; i < NELEMS(selectedIvs); i++)
     {
         // Randomly pick an IV from the available list and stop from being chosen again.
-        selectedIvs[i] = availableIVs[Random() % (NUM_STATS - i)];
-        RemoveIVIndexFromList(availableIVs, selectedIvs[i]);
+        // BUG: Instead of removing the IV that was just picked, this
+        // removes position 0 (HP) then position 1 (DEF), then position 2. This is why HP and DEF
+        // have a lower chance to be inherited in Emerald and why the IV picked for inheritance can
+        // be repeated. Amusingly, FRLG and RS also got this wrong. They remove selectedIvs[i], which
+        // is not an index! This means that it can sometimes remove the wrong stat.
+        // Randomly pick an IV from the available list and stop from being chosen again.
+        //selectedIvs[i] = availableIVs[Random() % (NUM_STATS - i)];
+        //RemoveIVIndexFromList(availableIVs, i);
+        u8 index = Random() % (NUM_STATS - i);
+        selectedIvs[i] = availableIVs[index];
+        RemoveIVIndexFromList(availableIVs, index);
+
+
     }
 
     // Determine which parent each of the selected IVs should inherit from.
@@ -877,6 +929,35 @@ static u8 GetEggMoves(struct Pokemon *pokemon, u16 *eggMoves)
             // TODO: the curly braces around this if statement are required for a matching build.
             break;
         }
+
+        eggMoves[i] = gEggMoves[eggMoveIdx + i];
+        numEggMoves++;
+    }
+
+    return numEggMoves;
+}
+
+u8 GetEggMovesSpecies(u16 species, u16* eggMoves)
+{
+    u16 eggMoveIdx;
+    u16 numEggMoves;
+    u16 i;
+
+    numEggMoves = 0;
+    eggMoveIdx = 0;
+    for (i = 0; i < ARRAY_COUNT(gEggMoves) - 1; i++)
+    {
+        if (gEggMoves[i] == species + EGG_MOVES_SPECIES_OFFSET)
+        {
+            eggMoveIdx = i + 1;
+            break;
+        }
+    }
+
+    for (i = 0; i < EGG_MOVES_ARRAY_COUNT; i++)
+    {
+        if (gEggMoves[eggMoveIdx + i] > EGG_MOVES_SPECIES_OFFSET)
+            break;
 
         eggMoves[i] = gEggMoves[eggMoveIdx + i];
         numEggMoves++;
@@ -1003,7 +1084,7 @@ static void AlterEggSpeciesWithIncenseItem(u16 *species, struct DayCare *daycare
     }
 }
 
-/*static void GiveVoltTackleIfLightBall(struct Pokemon *mon, struct DayCare *daycare)
+static void GiveVoltTackleIfLightBall(struct Pokemon *mon, struct DayCare *daycare)
 {
     u32 motherItem = GetBoxMonData(&daycare->mons[0].mon, MON_DATA_HELD_ITEM);
     u32 fatherItem = GetBoxMonData(&daycare->mons[1].mon, MON_DATA_HELD_ITEM);
@@ -1013,7 +1094,7 @@ static void AlterEggSpeciesWithIncenseItem(u16 *species, struct DayCare *daycare
         if (GiveMoveToMon(mon, MOVE_VOLT_TACKLE) == MON_HAS_MAX_MOVES)
             DeleteFirstMoveAndGiveMoveToMon(mon, MOVE_VOLT_TACKLE);
     }
-}*/
+}
 
 static u16 DetermineEggSpeciesAndParentSlots(struct DayCare *daycare, u8 *parentSlots)
 {
@@ -1073,8 +1154,8 @@ static void _GiveEggFromDaycare(struct DayCare *daycare)
     InheritIVs(&egg, daycare);
     BuildEggMoveset(&egg, &daycare->mons[parentSlots[1]].mon, &daycare->mons[parentSlots[0]].mon);
 
-    /*if (species == SPECIES_PICHU)
-        GiveVoltTackleIfLightBall(&egg, daycare);*/
+    if (species == SPECIES_PICHU)
+        GiveVoltTackleIfLightBall(&egg, daycare);
 
     isEgg = TRUE;
     SetMonData(&egg, MON_DATA_IS_EGG, &isEgg);
@@ -1135,6 +1216,22 @@ void GiveEggFromDaycare(void)
     _GiveEggFromDaycare(&gSaveBlock1Ptr->daycare);
 }
 
+u8 GetEggCyclesToSubtract(void)
+{
+    u8 count, i;
+    u8 returnVal = 4;
+    for (count = CalculatePlayerPartyCount(), i = 0; i < count; i++)
+    {
+        if (!GetMonData(&gPlayerParty[i], MON_DATA_SANITY_IS_EGG))
+        {
+            u8 ability = GetMonAbility(&gPlayerParty[i]);
+            if (ability == ABILITY_MAGMA_ARMOR || ability == ABILITY_FLAME_BODY)
+                returnVal += 4;
+        }
+    }
+    return returnVal;
+}
+
 static bool8 TryProduceOrHatchEgg(struct DayCare *daycare)
 {
     u32 i, validEggs = 0;
@@ -1156,7 +1253,8 @@ static bool8 TryProduceOrHatchEgg(struct DayCare *daycare)
     // Hatch Egg
     if (++daycare->stepCounter == 255)
     {
-        u32 steps;
+        u32 eggCycles;
+        u8 toSub = GetEggCyclesToSubtract();
 
         for (i = 0; i < gPlayerPartyCount; i++)
         {
@@ -1165,14 +1263,16 @@ static bool8 TryProduceOrHatchEgg(struct DayCare *daycare)
             if (GetMonData(&gPlayerParty[i], MON_DATA_SANITY_IS_BAD_EGG))
                 continue;
 
-            steps = GetMonData(&gPlayerParty[i], MON_DATA_FRIENDSHIP);
-            if (steps != 0)
+            eggCycles = GetMonData(&gPlayerParty[i], MON_DATA_FRIENDSHIP);
+            if (eggCycles != 0 && eggCycles >= toSub)
             {
-                steps -= 1;
-                SetMonData(&gPlayerParty[i], MON_DATA_FRIENDSHIP, &steps);
+                // If EggCycles does not equal zero and eggCycles is greater than the amount of cycles to subtract
+                eggCycles -= toSub;
+                SetMonData(&gPlayerParty[i], MON_DATA_FRIENDSHIP, &eggCycles);
             }
             else // hatch the egg
             {
+                // If egg cycles equal zero or the amount of egg cycles to subtract is greater than the amount of cycles left
                 gSpecialVar_0x8004 = i;
                 return TRUE;
             }
@@ -1192,6 +1292,58 @@ bool8 ShouldEggHatch(void)
 static bool8 IsEggPending(struct DayCare *daycare)
 {
     return (daycare->offspringPersonality != 0);
+}
+
+bool8 IsEggShiny(struct DayCare* daycare)
+{
+    u32 value = gSaveBlock2Ptr->playerTrainerId[0]
+        | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
+        | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
+        | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
+    u32 shinyValue = (HIHALF(value) ^ LOHALF(value) ^ HIHALF(daycare->offspringPersonality) ^ LOHALF(daycare->offspringPersonality));
+
+    return shinyValue < SHINY_ODDS;
+}
+
+bool8 IsPersonalityShiny(u32 personality, u32 value)
+{
+    u32 shinyValue;
+    if (value)
+    {
+        shinyValue = (HIHALF(value) ^ LOHALF(value) ^ HIHALF(personality) ^ LOHALF(personality));
+    }
+    else
+    {
+        value = gSaveBlock2Ptr->playerTrainerId[0]
+            | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
+            | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
+            | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
+        shinyValue = (HIHALF(value) ^ LOHALF(value) ^ HIHALF(personality) ^ LOHALF(personality));
+    }
+
+    return shinyValue < SHINY_ODDS;
+}
+
+u32 ForceShiny(u32 personality)
+{
+    u32 value = gSaveBlock2Ptr->playerTrainerId[0]
+        | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
+        | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
+        | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
+    personality = ((((Random() % SHINY_ODDS) ^ (HIHALF(value) ^ LOHALF(value))) ^ LOHALF(personality)) << 16) | LOHALF(personality);
+    return personality;
+
+    // Mathematical explaination of the above
+    // Personality is formatted like so: 00000000 00000000 00000000 00000000
+    // Seperating it out into high and low halfs, we end up with the following: High(00000000 00000000) Low(00000000 00000000)
+    // shinyValue is calculated by doing Trainer ID XOR Secret ID XOR High XOR Low
+    // If this shinyValue is < SHINY_ODDS, then the pokemon is shiny.
+    // For any generated personality value, we can perform (Trainer ID XOR Secret ID) XOR Low, then perform a shift (<<) by 16 bits
+    // to get a High value that, when XOR'd with the Low value again, will result in a shiny value of 0. To get the Low value
+    // in the personality value we just OR it with the High value we generated and shifted.
+    // But because we can technically have any shiny value from 0 to SHINY_ODDS minus 1, if we perform
+    // (Random() % SHINY_ODDS XOR (Trainer ID XOR Secret ID) XOR Low << 16) | Low, when we generate our shinyValue
+    // it will be equal to the Random() % SHINY_ODDS value.
 }
 
 // gStringVar1 = first mon's nickname
@@ -2055,8 +2207,11 @@ static void SpriteCB_Egg_2(struct Sprite* sprite)
             sprite->x2 = Sin(sprite->data[1], 2);
             if (sprite->data[0] == 15)
             {
+                // Third egg crack
+                // This ineffectually sets the animation to the frame it's already using.
+                // They likely meant to use the 3rd and final cracked frame of the egg, which goes unused as a result.
                 PlaySE(SE_BALL);
-                StartSpriteAnim(sprite, 2);
+                StartSpriteAnim(sprite, 3); //BUGFIX
                 CreateRandomEggShardSprite();
                 CreateRandomEggShardSprite();
             }
