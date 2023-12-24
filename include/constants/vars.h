@@ -59,7 +59,7 @@
 // the series, which is 1 damage every 4 steps.
 #define VAR_POISON_STEP_COUNTER             0x4022
 
-// Step counter. Caps at 1500. If you enter a map with
+// Step counter. Caps at 750. If you enter a map with
 // renewable hidden items and this counter is capped,
 // the counter resets to 0 and all renewable hidden
 // item flags are resampled.

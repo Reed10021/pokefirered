@@ -267,10 +267,10 @@ static const struct RenewableHiddenItemData sRenewableHiddenItems[] = {
             HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_ULTRA_BALL_2),
             HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_STAR_PIECE),
             HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_BIG_PEARL),
-            NO_ITEM,
-            NO_ITEM,
-            NO_ITEM,
-            NO_ITEM
+            HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_STARDUST),
+            HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_STARDUST_2),
+            HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_PEARL),
+            HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_PEARL_2)
         },
         .uncommon = {
             HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_STARDUST),
@@ -285,8 +285,8 @@ static const struct RenewableHiddenItemData sRenewableHiddenItems[] = {
         .common = {
             HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_ULTRA_BALL),
             HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_ULTRA_BALL_2),
-            NO_ITEM,
-            NO_ITEM,
+            HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_PEARL),
+            HIDDEN_ID(FLAG_HIDDEN_ITEM_ONE_ISLAND_TREASURE_BEACH_STARDUST),
             NO_ITEM,
             NO_ITEM,
             NO_ITEM,
@@ -557,7 +557,7 @@ void SetAllRenewableItemFlags(void)
 void IncrementRenewableHiddenItemStepCounter(void)
 {
     u16 var = VarGet(VAR_RENEWABLE_ITEM_STEP_COUNTER);
-    if (var < 1500)
+    if (var < 750)
     {
         VarSet(VAR_RENEWABLE_ITEM_STEP_COUNTER, var + 1);
     }
@@ -570,13 +570,16 @@ void TryRegenerateRenewableHiddenItems(void)
     for (i = 0; i < ARRAY_COUNT(sRenewableHiddenItems); i++)
     {
         if (sRenewableHiddenItems[i].mapGroup == gSaveBlock1Ptr->location.mapGroup
-         && sRenewableHiddenItems[i].mapNum == gSaveBlock1Ptr->location.mapNum)
+            && sRenewableHiddenItems[i].mapNum == gSaveBlock1Ptr->location.mapNum)
+        {
             found_map = i;
+            break;
+        }
     }
 
     if (found_map == 0xFF)
         return;
-    if (VarGet(VAR_RENEWABLE_ITEM_STEP_COUNTER) >= 1500)
+    if (VarGet(VAR_RENEWABLE_ITEM_STEP_COUNTER) >= 750)
     {
         VarSet(VAR_RENEWABLE_ITEM_STEP_COUNTER, 0);
         SetAllRenewableItemFlags();
