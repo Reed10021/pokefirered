@@ -21,6 +21,13 @@ static void InitTimeBasedEvents(void)
     RtcCalcLocalTime();
     gSaveBlock2Ptr->lastBerryTreeUpdate = gLocalTime;
     VarSet(VAR_DAYS, gLocalTime.days);
+    // Set all the things
+    ClearDailyFlags();
+    ClearOutbreakVars();
+    GenerateOutbreak();
+    UpdateWeatherPerDay(0);
+    UpdatePartyPokerusTime(0);
+    SetRandomLotteryNumber(0);
 }
 
 void DoTimeBasedEvents(void)
@@ -43,15 +50,9 @@ static void UpdatePerDay(struct Time *localTime)
         daysSince = localTime->days - *days;
         ClearDailyFlags();
         ClearOutbreakVars();
-        // UpdateDewfordTrendPerDay(daysSince);
         GenerateOutbreak();
         UpdateWeatherPerDay(daysSince);
         UpdatePartyPokerusTime(daysSince);
-        // UpdateMirageRnd(daysSince);
-        // UpdateBirchState(daysSince);
-        // UpdateFrontierManiac(daysSince);
-        // UpdateFrontierGambler(daysSince);
-        // SetShoalItemFlag(daysSince);
         SetRandomLotteryNumber(daysSince);
         *days = localTime->days;
     }
