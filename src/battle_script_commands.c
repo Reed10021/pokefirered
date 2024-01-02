@@ -9833,9 +9833,9 @@ static void Cmd_handleballthrow(void)
                     ballMultiplier = 10;
                 break;
             case ITEM_NEST_BALL:
-                if (gBattleMons[gBattlerTarget].level < 50)
+                if (gBattleMons[gBattlerTarget].level < 60)
                 {
-                    ballMultiplier = 50 - gBattleMons[gBattlerTarget].level;
+                    ballMultiplier = 60 - gBattleMons[gBattlerTarget].level;
                     if (ballMultiplier <= 9)
                         ballMultiplier = 10;
                 }
@@ -9856,11 +9856,11 @@ static void Cmd_handleballthrow(void)
                     ballMultiplier = 40;
                 break;
             case ITEM_LUXURY_BALL:
-                ballMultiplier = 15;
+                ballMultiplier = 20;
                 break;
             case ITEM_PREMIER_BALL:
                 if (IsMonShiny(&gEnemyParty[gBattlerPartyIndexes[gBattlerTarget]]))
-                    ballMultiplier = 50;
+                    ballMultiplier = 55;
                 else
                     ballMultiplier = 25;
                 break;
@@ -9909,19 +9909,23 @@ static void Cmd_handleballthrow(void)
             u16 caughtCount = GetNationalPokedexCount(FLAG_GET_CAUGHT);
             u32 crit = 0;
 
-            if (caughtCount > 179) {        // 180+
+            if (caughtCount > 379) {        // 380+
+                crit = (odds * 500) / 100;  // * 5.0
+            } else if (caughtCount > 319) { // 320+
+                crit = (odds * 400) / 100;  // * 4.0
+            } else if (caughtCount > 249) { // 250+
+                crit = (odds * 355) / 100;  // * 3.55
+            } else if (caughtCount > 189) { // 190+
+                crit = (odds * 300) / 100;  // * 3.0
+            } else if (caughtCount > 114) { // 115+
                 crit = (odds * 255) / 100;  // * 2.55
-            }
-            else if (caughtCount > 104) { // 105+
+            } else if (caughtCount > 64) {  // 65+
                 crit = (odds * 200) / 100;  // * 2.0
-            }
-            else if (caughtCount > 29) {  // 30+
+            } else if (caughtCount > 29) {  // 30+
                 crit = (odds * 155) / 100;  // * 1.55
-            }
-            else if (caughtCount > 9) {   // 10+
+            } else if (caughtCount > 9) {   // 10+
                 crit = odds;                // * 1.0
-            }
-            else {                        // 0-9
+            } else {                        // 0-9
                 crit = (odds * 55) / 100;   // else * 0.55
             }
 

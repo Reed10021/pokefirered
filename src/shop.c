@@ -1030,7 +1030,7 @@ static void Task_ReturnToItemListAfterItemPurchase(u8 taskId)
         PlaySE(SE_SELECT);
         if (ItemId_GetPocket(tItemId) == POCKET_POKE_BALLS && tItemId != ITEM_PREMIER_BALL)
         {
-            // Reward premier balls in increments of 3000 = 1.
+            // Reward premier balls in increments of 2000 = 1.
             // That way more expensive pokeballs gain roughly the same amount of
             // premier balls for the price.
             u16 premierBallCount = gShopData.itemPrice / ItemId_GetPrice(ITEM_PREMIER_BALL);

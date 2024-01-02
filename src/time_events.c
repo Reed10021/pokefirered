@@ -23,7 +23,7 @@ static const struct {
     {
         .species = SPECIES_TOGEPI,
         .moves = {MOVE_ANCIENT_POWER, MOVE_TRI_ATTACK, MOVE_FOLLOW_ME, MOVE_HELPING_HAND},
-        .level = 9,
+        .level = 8,
         .location = MAP_NUM(ROUTE1),
         .locationMap = MAPSEC_ROUTE_1
     },
@@ -294,6 +294,13 @@ static const struct {
         .locationMap = MAPSEC_ROUTE_25
     },
     {
+        .species = SPECIES_LARVITAR,
+        .moves = {MOVE_DRAGON_DANCE, MOVE_METEOR_MASH, MOVE_THIEF, MOVE_ROCK_SLIDE},
+        .level = 5,
+        .location = MAP_NUM(ROUTE1),
+        .locationMap = MAPSEC_ROUTE_1
+    },
+    {
         .species = SPECIES_CRAWDAUNT,
         .moves = {MOVE_DRAGON_DANCE, MOVE_SURF, MOVE_CRUNCH, MOVE_CROSS_CHOP},
         .level = 30,
@@ -549,7 +556,7 @@ static const struct {
         // Gen 1 starters
         .species = SPECIES_SQUIRTLE,
         .moves = {MOVE_DRAGON_DANCE, MOVE_CURSE, MOVE_CROSS_CHOP, MOVE_HYDRO_CANNON},
-        .level = 15,
+        .level = 5,
         .location = MAP_NUM(ROUTE1),
         .locationMap = MAPSEC_ROUTE_1
     },
@@ -563,7 +570,7 @@ static const struct {
     {
         .species = SPECIES_CHARMANDER,
         .moves = {MOVE_DRAGON_DANCE, MOVE_DRILL_PECK, MOVE_HEAT_WAVE, MOVE_OUTRAGE},
-        .level = 15,
+        .level = 5,
         .location = MAP_NUM(ROUTE1),
         .locationMap = MAPSEC_ROUTE_1
     },
@@ -577,7 +584,7 @@ static const struct {
     {
         .species = SPECIES_BULBASAUR,
         .moves = {MOVE_DRAGON_DANCE, MOVE_PETAL_DANCE, MOVE_SLUDGE_BOMB, MOVE_SPORE},
-        .level = 15,
+        .level = 5,
         .location = MAP_NUM(ROUTE1),
         .locationMap = MAPSEC_ROUTE_1
     },
@@ -616,6 +623,13 @@ static const struct {
         .level = 15,
         .location = MAP_NUM(ROUTE3),
         .locationMap = MAPSEC_ROUTE_3
+    },
+    {
+        .species = SPECIES_DRATINI,
+        .moves = {MOVE_TAIL_GLOW, MOVE_OUTRAGE, MOVE_FLAMETHROWER, MOVE_HYDRO_PUMP},
+        .level = 5,
+        .location = MAP_NUM(ROUTE1),
+        .locationMap = MAPSEC_ROUTE_1
     },
     {
         .species = SPECIES_CYNDAQUIL,
@@ -726,6 +740,8 @@ void GenerateOutbreak(void)
 {
     u16 outbreakIdx;
     u16 oldOutbreak = VarGet(VAR_YESTERDAYS_OUTBREAK);
+    u16 oldOldOutbreak = VarGet(VAR_TWO_DAYS_AGO_OUTBREAK);
+    u16 oldOldOldOutbreak = VarGet(VAR_THREE_DAYS_AGO_OUTBREAK);
 
     if (FlagGet(FLAG_DAILY_GENERATED_OUTBREAK)) // If flag is set, don't generate another outbreak. Flag gets cleared daily.
     {
@@ -735,8 +751,13 @@ void GenerateOutbreak(void)
     do
     {
         outbreakIdx = Random() % ARRAY_COUNT(sPokeOutbreakSpeciesList);
-    } while (sPokeOutbreakSpeciesList[outbreakIdx].species == oldOutbreak);
+    } while (sPokeOutbreakSpeciesList[outbreakIdx].species == oldOutbreak || 
+             sPokeOutbreakSpeciesList[outbreakIdx].species == oldOldOutbreak || 
+             sPokeOutbreakSpeciesList[outbreakIdx].species == oldOldOldOutbreak);
 
+    VarSet(VAR_THREE_DAYS_AGO_OUTBREAK, oldOldOutbreak);
+    VarSet(VAR_TWO_DAYS_AGO_OUTBREAK, oldOutbreak);
+    VarSet(VAR_YESTERDAYS_OUTBREAK, sPokeOutbreakSpeciesList[outbreakIdx].species);
     VarSet(VAR_OUTBREAK_LEVEL, sPokeOutbreakSpeciesList[outbreakIdx].level);
     VarSet(VAR_OUTBREAK_SPECIES, sPokeOutbreakSpeciesList[outbreakIdx].species);
     VarSet(VAR_OUTBREAK_MOVE_1, sPokeOutbreakSpeciesList[outbreakIdx].moves[0]);
@@ -745,7 +766,6 @@ void GenerateOutbreak(void)
     VarSet(VAR_OUTBREAK_MOVE_4, sPokeOutbreakSpeciesList[outbreakIdx].moves[3]);
     VarSet(VAR_OUTBREAK_LOCATION, sPokeOutbreakSpeciesList[outbreakIdx].location);
     VarSet(VAR_OUTBREAK_LOCATION_MAP, sPokeOutbreakSpeciesList[outbreakIdx].locationMap);
-    VarSet(VAR_YESTERDAYS_OUTBREAK, sPokeOutbreakSpeciesList[outbreakIdx].species);
     //show->massOutbreak.locationMapGroup = 3;
     //show->massOutbreak.probability = 50;
     FlagSet(FLAG_DAILY_GENERATED_OUTBREAK);

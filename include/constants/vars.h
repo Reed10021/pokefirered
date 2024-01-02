@@ -222,8 +222,8 @@
 #define VAR_OUTBREAK_LOCATION      0x4095
 #define VAR_OUTBREAK_LOCATION_MAP  0x4096
 #define VAR_YESTERDAYS_OUTBREAK    0x4097
-#define VAR_0x4098                 0x4098
-#define VAR_0x4099                 0x4099
+#define VAR_TWO_DAYS_AGO_OUTBREAK  0x4098
+#define VAR_THREE_DAYS_AGO_OUTBREAK 0x4099
 #define VAR_0x409A                 0x409A
 #define VAR_0x409B                 0x409B
 #define VAR_0x409C                 0x409C
