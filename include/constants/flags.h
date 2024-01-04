@@ -944,10 +944,10 @@
 #define FLAG_0x38D               0x38D
 #define FLAG_0x38E               0x38E
 #define FLAG_0x38F               0x38F
-#define DAILY_FLAGS_START                           (FLAG_0x38F + (8 - FLAG_0x38F % 8))
-#define FLAG_HIDDEN_ITEM_NAVEL_ROCK_SUMMIT_SACRED_ASH_DAILY 0x390
-#define FLAG_DAILY_PICKED_LOTO_TICKET                       0x391
-#define FLAG_DAILY_GENERATED_OUTBREAK                       0x392
+#define DAILY_FLAGS_START               (FLAG_0x38F + (8 - FLAG_0x38F % 8))
+#define FLAG_DAILY_PICKED_LOTO_TICKET    0x390
+#define FLAG_DAILY_GENERATED_OUTBREAK    0x391
+#define FLAG_0x392               0x392
 #define FLAG_0x393               0x393
 #define FLAG_0x394               0x394
 #define FLAG_0x395               0x395
@@ -1197,8 +1197,7 @@
 #define FLAG_HIDDEN_ITEM_ROUTE14_PINAP_BERRY                               (FLAG_HIDDEN_ITEMS_START + 157)
 #define FLAG_HIDDEN_ITEM_MT_EMBER_EXTERIOR_FIRE_STONE                      (FLAG_HIDDEN_ITEMS_START + 158)
 #define FLAG_HIDDEN_ITEM_POKEMON_TOWER_7F_SOOTHE_BELL                      (FLAG_HIDDEN_ITEMS_START + 159)
-//#define FLAG_HIDDEN_ITEM_NAVEL_ROCK_SUMMIT_SACRED_ASH                    (FLAG_HIDDEN_ITEMS_START + 160)
-#define FLAG_HIDDEN_ITEM_UNUSED_0xA0                                       (FLAG_HIDDEN_ITEMS_START + 160)
+#define FLAG_HIDDEN_ITEM_NAVEL_ROCK_SUMMIT_SACRED_ASH                      (FLAG_HIDDEN_ITEMS_START + 160)
 #define FLAG_HIDDEN_ITEM_TWO_ISLAND_CAPE_BRINK_PP_MAX                      (FLAG_HIDDEN_ITEMS_START + 161)
 #define FLAG_HIDDEN_ITEM_MT_EMBER_EXTERIOR_ULTRA_BALL                      (FLAG_HIDDEN_ITEMS_START + 162)
 #define FLAG_HIDDEN_ITEM_THREE_ISLAND_DUNSPARCE_TUNNEL_NUGGET              (FLAG_HIDDEN_ITEMS_START + 163)
