@@ -944,10 +944,10 @@
 #define FLAG_0x38D               0x38D
 #define FLAG_0x38E               0x38E
 #define FLAG_0x38F               0x38F
-#define DAILY_FLAGS_START               (FLAG_0x38F + (8 - FLAG_0x38F % 8))
-#define FLAG_DAILY_PICKED_LOTO_TICKET    0x390
-#define FLAG_DAILY_GENERATED_OUTBREAK    0x391
-#define FLAG_0x392               0x392
+#define DAILY_FLAGS_START        (FLAG_0x38F + (8 - FLAG_0x38F % 8))
+#define FLAG_0x390               0x390
+#define FLAG_DAILY_PICKED_LOTO_TICKET      0x391
+#define FLAG_DAILY_GENERATED_OUTBREAK      0x392
 #define FLAG_0x393               0x393
 #define FLAG_0x394               0x394
 #define FLAG_0x395               0x395
