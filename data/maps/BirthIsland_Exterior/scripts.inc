@@ -114,6 +114,7 @@ BirthIsland_Exterior_EventScript_Ticket::
 	goto_if_eq VAR_RESULT, TRUE, BirthIsland_Exterior_EventScript_DefeatedDeoxys_No_Ticket
 	msgbox BirthIsland_Exterior_Text_DefeatedDeoxys_SomethingOnTheGround, MSGBOX_DEFAULT
 	giveitem ITEM_MYSTIC_TICKET
+	closemessage
 	setflag FLAG_ENABLE_SHIP_NAVEL_ROCK
 BirthIsland_Exterior_EventScript_DefeatedDeoxys_No_Ticket:
 	end

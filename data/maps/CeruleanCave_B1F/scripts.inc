@@ -64,6 +64,7 @@ CeruleanCave_B1F_EventScript_Ticket::
 	goto_if_eq VAR_RESULT, TRUE, CeruleanCave_B1F_EventScript_Ticket_NoTicket
 	msgbox CeruleanCave_B1F_Text_DefeatedMewtwo_SomethingOnTheGround, MSGBOX_DEFAULT
 	giveitem ITEM_AURORA_TICKET
+	closemessage
 	setflag FLAG_ENABLE_SHIP_BIRTH_ISLAND
 CeruleanCave_B1F_EventScript_Ticket_NoTicket:
 	end
