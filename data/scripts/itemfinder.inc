@@ -3,7 +3,7 @@ EventScript_ItemfinderDigUpUnderfootItem::
 	textcolor NPC_TEXT_COLOR_NEUTRAL
 	waitse
 	call EventScript_TryPickUpHiddenItem
-	goto_if_eq VAR_0x8007, TRUE, EventScript_DigUpItemPutInPocket
+	goto_if_ne VAR_0x8007, FALSE, EventScript_DigUpItemPutInPocket
 	goto_if_eq VAR_0x8007, FALSE, EventScript_DigUpItemBagIsFull
 	end
 
@@ -12,7 +12,8 @@ EventScript_DigUpItemPutInPocket::
 	waitfanfare
 	waitmessage
 	delay 60
-	msgbox Text_PutItemAway
+	@ msgbox Text_PutItemAway
+	call EventScript_PutItemMsg
 	special SetHiddenItemFlag
 	releaseall
 	end

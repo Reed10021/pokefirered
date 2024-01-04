@@ -970,6 +970,7 @@ extern const u8 gText_SmallDot[];
 extern const u8 gText_LargeDot[];
 extern const u8 gText_PageNav[];
 extern const u8 gText_Flashback[];
+extern const u8 gText_Version[];
 extern const u8 gText_FrameType[];
 extern const u8 gTextJP_Type[];
 extern const u8 gText_PickSwitchCancel[];

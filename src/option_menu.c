@@ -28,6 +28,7 @@ enum
     MENUITEM_FRAMETYPE,
     MENUITEM_CANCEL,
     MENUITEM_FLASHBACK,
+    MENUITEM_VERSION,
     MENUITEM_CANCEL_PG2,
     MENUITEM_COUNT
 };
@@ -149,6 +150,7 @@ static const u8 *const sOptionMenuItemsNames[MENUITEM_COUNT] =
     [MENUITEM_FRAMETYPE]   = gText_Frame,
     [MENUITEM_CANCEL]      = gText_OptionMenuCancel,
     [MENUITEM_FLASHBACK]   = gText_Flashback,
+    [MENUITEM_VERSION]     = gText_Version,
     [MENUITEM_CANCEL_PG2]  = gText_OptionMenuCancel,
 };
 
