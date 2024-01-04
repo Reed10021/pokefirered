@@ -144,7 +144,7 @@ static const u8 sWeatherCycleRoute9_10[] =
     WEATHER_SUNNY,
     WEATHER_SUNNY,
     WEATHER_RAIN,
-    WEATHER_SANDSTORM,
+    WEATHER_SUNNY,
     WEATHER_SANDSTORM,
 };
 

@@ -60,20 +60,24 @@ ChangeDeoxysForm_End:
 	end
 
 ChangeDeoxysForm_Text_Beginning_Normal:
-	.string "Hmm... This rock might react with DEOXYS\n"
-	.string "and change it into its NORMAL form.$"
+	.string "Hmm... This meteorite might react\n"
+	.string "with DEOXYS and change it into\l"
+	.string "its NORMAL form.$"
 
 ChangeDeoxysForm_Text_Beginning_Attack:
-	.string "Hmm... This rock might react with DEOXYS\n"
-	.string "and change it into its ATTACK form.$"
+	.string "Hmm... This meteorite might react\n"
+	.string "with DEOXYS and change it into\l"
+	.string "its ATTACK form.$"
 
 ChangeDeoxysForm_Text_Beginning_Defense:
-	.string "Hmm... This rock might react with DEOXYS\n"
-	.string "and change it into its DEFENSE form.$"
+	.string "Hmm... This meteorite might react\n"
+	.string "with DEOXYS and change it into\l"
+	.string "its DEFENSE form.$"
 
 ChangeDeoxysForm_Text_Beginning_Speed:
-	.string "Hmm... This rock might react with DEOXYS\n"
-	.string "and change it into its SPEED form.$"
+	.string "Hmm... This meteorite might react\n"
+	.string "with DEOXYS and change it into\l"
+	.string "its SPEED form.$"
 
 ChangeDeoxysForm_Text_Prompt:
 	.string "Do you want to change DEOXYS's form?$"
