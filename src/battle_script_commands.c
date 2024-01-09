@@ -5679,7 +5679,7 @@ static void Cmd_getmoneyreward(void)
     {
         moneyReward = ComputeWhiteOutMoneyLoss();
     }
-    PREPARE_WORD_NUMBER_BUFFER(gBattleTextBuff1, 6, moneyReward);
+    PREPARE_WORD_NUMBER_BUFFER(gBattleTextBuff1, 7, moneyReward);
     if (moneyReward)
         gBattlescriptCurrInstr += 5;
     else
@@ -7369,7 +7369,7 @@ static void Cmd_givepaydaymoney(void)
         u32 bonusMoney = gPaydayMoney * gBattleStruct->moneyMultiplier;
         AddMoney(&gSaveBlock1Ptr->money, bonusMoney);
 
-        PREPARE_HWORD_NUMBER_BUFFER(gBattleTextBuff1, 5, bonusMoney)
+        PREPARE_WORD_NUMBER_BUFFER(gBattleTextBuff1, 7, bonusMoney)
 
         BattleScriptPush(gBattlescriptCurrInstr + 1);
         gBattlescriptCurrInstr = BattleScript_PrintPayDayMoneyString;
