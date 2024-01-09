@@ -449,7 +449,7 @@ static const struct {
     },
     {
         .species = SPECIES_BELDUM,
-        .moves = {MOVE_ICE_PUNCH, MOVE_THUNDER_PUNCH, MOVE_IRON_DEFENSE, MOVE_DRAGON_DANCE},
+        .moves = {MOVE_METEOR_MASH, MOVE_ICE_PUNCH, MOVE_IRON_DEFENSE, MOVE_DRAGON_DANCE},
         .level = 8,
         .location = MAP_NUM(ROUTE22),
         .locationMap = MAPSEC_ROUTE_22
@@ -504,8 +504,8 @@ static const struct {
         .locationMap = MAPSEC_ROUTE_21
     },
     {
-        .species = SPECIES_EEVEE,
-        .moves = {MOVE_DRAGON_DANCE, MOVE_THIEF, MOVE_SHADOW_BALL, MOVE_ACID_ARMOR},
+        .species = SPECIES_SUNFLORA,
+        .moves = {MOVE_TAIL_GLOW, MOVE_FIRE_BLAST, MOVE_GIGA_DRAIN, MOVE_PSYCHIC},
         .level = 13,
         .location = MAP_NUM(ROUTE4),
         .locationMap = MAPSEC_ROUTE_4
@@ -625,13 +625,6 @@ static const struct {
         .locationMap = MAPSEC_ROUTE_3
     },
     {
-        .species = SPECIES_DRATINI,
-        .moves = {MOVE_TAIL_GLOW, MOVE_OUTRAGE, MOVE_FLAMETHROWER, MOVE_HYDRO_PUMP},
-        .level = 5,
-        .location = MAP_NUM(ROUTE1),
-        .locationMap = MAPSEC_ROUTE_1
-    },
-    {
         .species = SPECIES_CYNDAQUIL,
         .moves = {MOVE_DRAGON_DANCE, MOVE_BLAST_BURN, MOVE_FURY_CUTTER, MOVE_ICE_PUNCH},
         .level = 25,
@@ -651,6 +644,13 @@ static const struct {
         .level = 25,
         .location = MAP_NUM(ROUTE17),
         .locationMap = MAPSEC_ROUTE_17
+    },
+    {
+        .species = SPECIES_DRATINI,
+        .moves = {MOVE_TAIL_GLOW, MOVE_OUTRAGE, MOVE_FLAMETHROWER, MOVE_HYDRO_PUMP},
+        .level = 5,
+        .location = MAP_NUM(ROUTE1),
+        .locationMap = MAPSEC_ROUTE_1
     },
     {
         .species = SPECIES_SHARPEDO,
