@@ -3,6 +3,7 @@
 #include "field_player_avatar.h"
 #include "metatile_behavior.h"
 #include "event_object_movement.h"
+#include "event_data.h"
 #include "fieldmap.h"
 #include "field_camera.h"
 #include "overworld.h"
@@ -186,12 +187,26 @@ static void BikeTransition_MoveDirection(u8 direction)
         else
         {
             
-            if (collision == COLLISION_COUNT)
-                PlayerWalkFast(direction);
-            else if (PlayerIsMovingOnRockStairs(direction))
-                PlayerWalkFast(direction);
+            //if (collision == COLLISION_COUNT)
+            //    PlayerWalkFast(direction);
+            //else if (PlayerIsMovingOnRockStairs(direction))
+            //    PlayerWalkFast(direction);
+            //else
+            //    PlayerRideWaterCurrent(direction);
+
+            if (gBikeToggleBtnSet)
+            {
+                gBikeToggleBtnSet = FALSE;
+                if (FlagGet(FLAG_BIKE_GEARUP_TOGGLE) == FALSE)
+                    FlagSet(FLAG_BIKE_GEARUP_TOGGLE);
+                else
+                    FlagClear(FLAG_BIKE_GEARUP_TOGGLE);
+            }
+
+            if (FlagGet(FLAG_BIKE_GEARUP_TOGGLE))
+                PlayerWalkFaster(direction);
             else
-                PlayerRideWaterCurrent(direction);
+                PlayerWalkFast(direction);
         }
     }
 }

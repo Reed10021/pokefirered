@@ -32,6 +32,7 @@ static EWRAM_DATA u8 sTeleportSavedFacingDirection = DIR_NONE;
 EWRAM_DATA struct ObjectEvent gObjectEvents[OBJECT_EVENTS_COUNT] = {};
 EWRAM_DATA struct PlayerAvatar gPlayerAvatar = {};
 EWRAM_DATA bool8 gRunToggleBtnSet = FALSE;
+EWRAM_DATA bool8 gBikeToggleBtnSet = FALSE;
 
 static u8 ObjectEventCB2_NoMovement2(struct ObjectEvent * object, struct Sprite *sprite);
 static bool8 TryUpdatePlayerSpinDirection(void);

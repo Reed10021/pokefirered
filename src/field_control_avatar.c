@@ -155,10 +155,16 @@ void FieldGetPlayerInput(struct FieldInput *input, u16 newKeys, u16 heldKeys)
         input->dpadDirection = sCurrentDirection;
 
         // If B is pressed, field controls are allowed, and the player is either running or walking.
-        if ((newKeys & B_BUTTON) && (!ArePlayerFieldControlsLocked())
-            && (gPlayerAvatar.flags & (PLAYER_AVATAR_FLAG_DASH | PLAYER_AVATAR_FLAG_ON_FOOT)))
+        if ((newKeys & B_BUTTON) && (!ArePlayerFieldControlsLocked()))
         {
-            gRunToggleBtnSet = TRUE;
+            if (gPlayerAvatar.flags & (PLAYER_AVATAR_FLAG_DASH | PLAYER_AVATAR_FLAG_ON_FOOT))
+                gRunToggleBtnSet = TRUE;
+            else if ((gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_MACH_BIKE)
+                || (gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_ACRO_BIKE))
+            {
+                PlaySE(SE_CLICK);
+                gBikeToggleBtnSet = TRUE;
+            }
         }
     }
 }

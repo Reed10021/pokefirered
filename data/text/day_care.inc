@@ -40,13 +40,13 @@ DayCare_Text_EggChainInfo::
 	.string "Chain count is {STR_VAR_1}.$"
 
 DayCare_Text_NormalChainInfo::
-	.string "It also looks like you're chaining\n"
-	.string "wild {STR_VAR_1}. Your Chain Level\p"
+	.string "It looks like you're chaining\n"
+	.string "wild {STR_VAR_1}. Your Chain Level\l"
 	.string "for {STR_VAR_1} is {STR_VAR_2}.$"
 
 DayCare_Text_EggIsSpecialAreYouSure:
 	.string "I have a feeling this egg is special!\n"
-	.string "You really DO want this, right??$"
+	.string "You really DO want this, right??{PAUSE_UNTIL_PRESS}$"
 
 DayCare_Text_SeeWifeIfYouWantToPickUpMon::
 	.string "ポケモンを　ひきとりたい　ときは\n"

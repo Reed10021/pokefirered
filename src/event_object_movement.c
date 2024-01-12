@@ -154,6 +154,8 @@ static void MovementType_RaiseHandAndStop(struct Sprite *);
 static void MovementType_RaiseHandAndJump(struct Sprite *);
 static void MovementType_RaiseHandAndSwim(struct Sprite *);
 static void MovementType_WanderAroundSlower(struct Sprite *);
+void GetObjectPosition(void);
+u16 CheckObjectAtXY(void);
 
 enum {
     MOVE_SPEED_NORMAL, // walking
@@ -9407,4 +9409,58 @@ static void DoRippleFieldEffect(struct ObjectEvent *objectEvent, struct Sprite *
     gFieldEffectArguments[2] = 151;
     gFieldEffectArguments[3] = 3;
     FieldEffectStart(FLDEFF_RIPPLE);
+}
+
+// get position (0 for current, 1 for map) of object event, return to VAR_0x8007, VAR_0x8008
+void GetObjectPosition(void)
+{
+    u16 localId = gSpecialVar_0x8000;
+    u16 useTemplate = gSpecialVar_0x8001;
+
+    u16* x = &gSpecialVar_0x8007;
+    u16* y = &gSpecialVar_0x8008;
+
+    if (!useTemplate)
+    {
+        /* current position */
+        const u16 objId = GetObjectEventIdByLocalId(localId);
+        if (objId == OBJECT_EVENTS_COUNT)
+        {
+            *x = 0;
+            *y = 0;
+            gSpecialVar_Result = FALSE;
+            return;
+        }
+        else
+        {
+            const struct ObjectEvent* objEvent = &gObjectEvents[objId];
+            *x = objEvent->currentCoords.x - 7; // subtract out camera size
+            *y = objEvent->currentCoords.y - 7;
+        }
+    }
+    else
+    {
+        const struct ObjectEventTemplate* objTemplate =
+            FindObjectEventTemplateByLocalId(localId,
+                gSaveBlock1Ptr->objectEventTemplates,
+                gMapHeader.events->objectEventCount);
+        *x = objTemplate->x;
+        *y = objTemplate->y;
+    }
+    gSpecialVar_Result = TRUE;
+}
+
+// special to check if there is any object at a given position
+u16 CheckObjectAtXY(void)
+{
+    u16 x = gSpecialVar_0x8005 + 7;
+    u16 y = gSpecialVar_0x8006 + 7;
+    u32 i;
+
+    for (i = 0; i < OBJECT_EVENTS_COUNT; i++)
+    {
+        if (gObjectEvents[i].active && gObjectEvents[i].currentCoords.x == x && gObjectEvents[i].currentCoords.y == y)
+            return TRUE;
+    }
+    return FALSE;
 }

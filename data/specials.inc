@@ -462,4 +462,6 @@ gSpecials::
 	def_special BufferLottoTicketNumber
 	def_special RetrieveLotteryNumber
 	def_special GetSpeciesFromRoamer
+	def_special GetObjectPosition
+	def_special CheckObjectAtXY
 gSpecialsEnd::

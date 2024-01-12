@@ -70,6 +70,53 @@ FourIsland_Movement_PlayerWatchRivalExit::
 	walk_in_place_faster_right
 	step_end
 
+FourIsland_EventScript_DaycareMan_Movement::
+	goto_if_unset FLAG_PENDING_DAYCARE_EGG, FourIsland_EventScript_DaycareMan_Movement_MoveBack
+	getobjectxy LOCALID_DAYCARE_MAN, 0
+	goto_if_ge VAR_0x8008, 14, FourIsland_EventScript_DaycareMan_Movement_End
+	goto_if_eq VAR_RESULT, FALSE, FourIsland_EventScript_DaycareMan_Movement_OffMap
+
+	@ If Y is already >=14, dont move down (south).
+	checkobjectat 16, 14
+	goto_if_eq VAR_RESULT, TRUE, FourIsland_EventScript_DaycareMan_Movement_End
+	@ If an object is already at X = 16 Y = 14, dont move.
+	applymovement LOCALID_DAYCARE_MAN, FourIsland_Movement_DaycareMan_WalkDown
+	waitmovement LOCALID_DAYCARE_MAN
+	setobjectxyperm LOCALID_DAYCARE_MAN, 16, 14
+	goto FourIsland_EventScript_DaycareMan_Movement_End
+
+FourIsland_EventScript_DaycareMan_Movement_OffMap:
+	setobjectxyperm LOCALID_DAYCARE_MAN, 16, 14
+	goto FourIsland_EventScript_DaycareMan_Movement_End
+
+FourIsland_EventScript_DaycareMan_Movement_MoveBack:
+	getobjectxy LOCALID_DAYCARE_MAN, 0
+	goto_if_le VAR_0x8008, 13, FourIsland_EventScript_DaycareMan_Movement_End
+	goto_if_eq VAR_RESULT, FALSE, Route117_EventScript_DaycareMan_Movement_OffMap_MoveBack
+	@ If Y is already <=13, dont move up (north).
+	checkobjectat 16, 13
+	goto_if_eq VAR_RESULT, TRUE, FourIsland_EventScript_DaycareMan_Movement_End
+	@ If an object is already at X = 16 Y = 13, dont move.
+	applymovement LOCALID_DAYCARE_MAN, FourIsland_Movement_DaycareMan_WalkUp
+	waitmovement LOCALID_DAYCARE_MAN
+	setobjectxyperm LOCALID_DAYCARE_MAN, 16, 13
+	goto FourIsland_EventScript_DaycareMan_Movement_End
+
+Route117_EventScript_DaycareMan_Movement_OffMap_MoveBack:
+	setobjectxyperm LOCALID_DAYCARE_MAN, 16, 13
+
+FourIsland_EventScript_DaycareMan_Movement_End:
+	end
+
+FourIsland_Movement_DaycareMan_WalkDown::
+	walk_down
+	step_end
+
+FourIsland_Movement_DaycareMan_WalkUp::
+	walk_up
+	walk_in_place_faster_down
+	step_end
+
 FourIsland_EventScript_DaycareMan::
 	goto_if_questlog EventScript_ReleaseEnd
 	special QuestLog_CutRecording
@@ -100,7 +147,7 @@ FourIsland_EventScript_DaycareEggWaiting::
 	goto_if_eq VAR_RESULT, YES, FourIsland_EventScript_DaycareAcceptEgg
 	msgbox DayCare_Text_IWillKeepDoYouWantIt, MSGBOX_YESNO
 	goto_if_eq VAR_RESULT, YES, FourIsland_EventScript_DaycareAcceptEgg
-	compare VAR_0x8006, 5
+	compare VAR_0x8009, 5
 	goto_if_ne NotShiny @ If equal, then prompt about special egg
 	msgbox DayCare_Text_EggIsSpecialAreYouSure, MSGBOX_YESNO
 	compare VAR_RESULT, YES
@@ -117,6 +164,8 @@ NotShiny:
 	buffernumberstring 1, VAR_CHAIN
 	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
 NotChaining1:
+	closemessage
+	call FourIsland_EventScript_DaycareMan_Movement
 	release
 	end
 
@@ -145,6 +194,8 @@ FourIsland_EventScript_DaycareReceivedEgg::
 	buffernumberstring 1, VAR_CHAIN
 	msgbox DayCare_Text_NormalChainInfo, MSGBOX_DEFAULT
 NoChaining:
+	closemessage
+	call FourIsland_EventScript_DaycareMan_Movement
 	release
 	end
 
