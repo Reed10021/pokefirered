@@ -1808,21 +1808,24 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
     else
         personality = Random32();
 
-    //SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
-
     //Determine original trainer ID
     //if (otIdType == OT_ID_RANDOM_NO_SHINY) //Pokemon cannot be shiny
     //{
     //    value = (Random() << 0x10) | Random() % 65536;
-    //}
-    /*else*/ if (otIdType == OT_ID_PRESET) //Pokemon has a preset OT ID
+    //} else if
+
+    if (otIdType == OT_ID_PRESET) //Pokemon has a preset OT ID
     {
         value = fixedOtId;
     }
     else //Player is the OT
     {
         if (otIdType == OT_ID_RANDOM_NO_SHINY)
+        {
             value = (Random() << 0x10) | Random();
+            trueChainCount = 110;
+            adjustedChainCount = trueChainCount + 290;
+        }
         else
             value = gSaveBlock2Ptr->playerTrainerId[0]
                   | (gSaveBlock2Ptr->playerTrainerId[1] << 8)
@@ -1896,6 +1899,15 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
             }
         }
     }
+
+    if (otIdType == OT_ID_RANDOM_NO_SHINY)
+    {
+        if (IsPersonalityShiny(personality, value))
+        {
+            personality = ForceShiny(fixedPersonality, value);
+        }
+    }
+
     SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
     SetBoxMonData(boxMon, MON_DATA_OT_ID, &value);
 
@@ -2163,7 +2175,7 @@ void CreateMonWithNature(struct Pokemon *mon, u16 species, u8 level, u8 fixedIV,
     {
         personality = Random32();
         if (shinyFlag)
-            personality = ForceShiny(personality);
+            personality = ForceShiny(personality, 0);
     }
 
     CreateMon(mon, species, level, fixedIV, TRUE, personality, OT_ID_PLAYER_ID, 0);
@@ -2250,7 +2262,7 @@ void CreateMonWithGenderNatureLetter(struct Pokemon *mon, u16 species, u8 level,
         {
             personality = Random32();
             if (shinyFlag)
-                personality = ForceShiny(personality);
+                personality = ForceShiny(personality, 0);
             actualLetter = ((((personality & 0x3000000) >> 18) | ((personality & 0x30000) >> 12) | ((personality & 0x300) >> 6) | (personality & 0x3)) % 28);
         }
     }
@@ -2261,7 +2273,7 @@ void CreateMonWithGenderNatureLetter(struct Pokemon *mon, u16 species, u8 level,
         {
             personality = Random32();
             if (shinyFlag)
-                personality = ForceShiny(personality);
+                personality = ForceShiny(personality, 0);
         }
     }
 

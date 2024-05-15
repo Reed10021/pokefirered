@@ -6607,6 +6607,7 @@ static void Task_Mints(u8 taskId)
         s32 rerolls = 1000000;
         u32 oldPersonality = GetMonData(&gPlayerParty[tMonId], MON_DATA_PERSONALITY, NULL);
         u32 personality;
+        u32 otId = GetMonData(&gPlayerParty[tMonId], MON_DATA_OT_ID, NULL);
         u16 checksum;
         u8 ability = oldPersonality & 1;
         bool8 isShiny = IsMonShiny(&gPlayerParty[tMonId]);
@@ -6624,10 +6625,10 @@ static void Task_Mints(u8 taskId)
             rerolls--;
             personality = Random32();
 
-            if (isShiny && !IsPersonalityShiny(personality, 0)) {
-                personality = ForceShiny(personality);
+            if (isShiny && !IsPersonalityShiny(personality, otId)) {
+                personality = ForceShiny(personality, otId);
             }
-            else if (IsPersonalityShiny(personality, 0)) {
+            else if (IsPersonalityShiny(personality, otId)) {
                 continue; // If we accidentally rolled a shiny personality, but the original isn't shiny, then keep rerolling. 
             }
 

@@ -359,7 +359,7 @@ static u32 GenerateUnownPersonalityByLetter(u8 letter)
     {
         personality = (Random() << 16) | Random();
         if (shinyFlag)
-            personality = ForceShiny(personality);
+            personality = ForceShiny(personality, 0);
     } while (GetUnownLetterByPersonalityLoByte(personality) != letter);
     return personality;
 }
