@@ -724,9 +724,9 @@
                 "species": "SPECIES_LUNATONE"
               },
               {
-                "min_level": 9,
-                "max_level": 9,
-                "species": "SPECIES_PARAS"
+                "min_level": 6,
+                "max_level": 6,
+                "species": "SPECIES_TRAPINCH"
               },
               {
                 "min_level": 10,
@@ -13266,9 +13266,9 @@
                 "species": "SPECIES_LUNATONE"
               },
               {
-                "min_level": 9,
-                "max_level": 9,
-                "species": "SPECIES_PARAS"
+                "min_level": 6,
+                "max_level": 6,
+                "species": "SPECIES_TRAPINCH"
               },
               {
                 "min_level": 10,
